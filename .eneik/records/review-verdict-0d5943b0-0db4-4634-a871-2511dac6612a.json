@@ -1,0 +1,12 @@
+{
+  "verdicts": [
+    {
+      "sourceIndex": 0,
+      "verdict": "approve",
+      "criticalReason": "",
+      "concerns": [
+        "Added an undo migration script (U...) which violates the 'single migration file' instruction."
+      ]
+    }
+  ]
+}
