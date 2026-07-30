@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Hanken+Grotesk:wght@600;700;800&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .sync-pulse {
+            animation: pulse-ring 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.5; }
+            50% { transform: scale(1.05); opacity: 0.8; }
+            100% { transform: scale(0.95); opacity: 0.5; }
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(226, 232, 240, 0.8);
+        }
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "primary-fixed": "#dae2fd",
+                      "tertiary-container": "#271901",
+                      "on-secondary-fixed": "#001a42",
+                      "inverse-surface": "#213145",
+                      "background": "#f8f9ff",
+                      "surface-container-low": "#eff4ff",
+                      "on-primary": "#ffffff",
+                      "surface-container": "#e5eeff",
+                      "secondary-container": "#2170e4",
+                      "secondary": "#0058be",
+                      "on-secondary-fixed-variant": "#004395",
+                      "surface-dim": "#cbdbf5",
+                      "tertiary": "#000000",
+                      "error-container": "#ffdad6",
+                      "on-error": "#ffffff",
+                      "primary": "#000000",
+                      "surface-container-lowest": "#ffffff",
+                      "secondary-fixed-dim": "#adc6ff",
+                      "tertiary-fixed-dim": "#dec29a",
+                      "on-tertiary": "#ffffff",
+                      "on-background": "#0b1c30",
+                      "on-tertiary-fixed-variant": "#574425",
+                      "error": "#ba1a1a",
+                      "on-primary-fixed-variant": "#3f465c",
+                      "on-primary-container": "#7c839b",
+                      "surface-bright": "#f8f9ff",
+                      "on-surface": "#0b1c30",
+                      "surface-container-high": "#dce9ff",
+                      "surface-container-highest": "#d3e4fe",
+                      "primary-fixed-dim": "#bec6e0",
+                      "secondary-fixed": "#d8e2ff",
+                      "outline-variant": "#c6c6cd",
+                      "primary-container": "#131b2e",
+                      "on-error-container": "#93000a",
+                      "surface": "#f8f9ff",
+                      "on-primary-fixed": "#131b2e",
+                      "on-tertiary-container": "#98805d",
+                      "surface-variant": "#d3e4fe",
+                      "on-secondary": "#ffffff",
+                      "inverse-primary": "#bec6e0",
+                      "tertiary-fixed": "#fcdeb5",
+                      "on-tertiary-fixed": "#271901",
+                      "surface-tint": "#565e74",
+                      "on-surface-variant": "#45464d",
+                      "on-secondary-container": "#fefcff",
+                      "outline": "#76777d",
+                      "inverse-on-surface": "#eaf1ff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "inline-gap": "0.5rem",
+                      "touch-target-min": "2.75rem",
+                      "section-padding": "1.25rem",
+                      "stack-gap": "0.75rem",
+                      "container-margin": "1rem"
+              },
+              "fontFamily": {
+                      "data-mono": ["JetBrains Mono"],
+                      "body-md": ["Inter"],
+                      "headline-lg": ["Hanken Grotesk"],
+                      "label-caps": ["Inter"],
+                      "headline-md": ["Hanken Grotesk"],
+                      "body-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "data-mono": ["13px", {"lineHeight": "18px", "fontWeight": "500"}],
+                      "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                      "headline-md": ["20px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md min-h-screen">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-margin h-touch-target-min bg-surface border-b border-outline-variant">
+<div class="flex items-center gap-2">
+<button class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low transition-colors duration-200">
+<span class="material-symbols-outlined text-on-surface">arrow_back</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-secondary">Canvas LMS Sync</h1>
+</div>
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-on-surface-variant">settings</span>
+<div class="w-8 h-8 rounded-full bg-secondary-container flex items-center justify-center text-on-secondary-container font-bold text-xs">
+                AP
+            </div>
+</div>
+</header>
+<main class="pt-20 pb-24 px-container-margin max-w-4xl mx-auto space-y-stack-gap">
+<!-- Status Hero Section -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-gutter">
+<!-- Large Status Indicator (Bento Main) -->
+<div class="md:col-span-2 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col items-center justify-center text-center relative overflow-hidden">
+<div class="absolute top-0 left-0 w-full h-1 bg-secondary transition-all duration-1000" id="sync-progress-bar" style="width: 65%"></div>
+<div class="w-24 h-24 rounded-full bg-green-100/30 flex items-center justify-center mb-4 sync-pulse border border-green-200">
+<span class="material-symbols-outlined text-green-600 text-5xl" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<h2 class="font-headline-lg text-headline-lg text-on-background mb-1">System Operational</h2>
+<p class="text-on-surface-variant font-body-md mb-6">Last sync successful at 09:42 AM Today</p>
+<div class="flex gap-3 w-full">
+<button class="flex-1 h-touch-target-min bg-primary text-on-primary rounded-lg font-label-caps uppercase tracking-wider flex items-center justify-center gap-2 hover:opacity-90 active:scale-95 transition-all" onclick="simulateSync()">
+<span class="material-symbols-outlined text-sm">sync</span>
+                        Sync Now
+                    </button>
+<button class="px-4 h-touch-target-min bg-surface-container-high text-on-surface rounded-lg border border-outline-variant hover:bg-surface-container-highest transition-colors">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+<!-- Stats Column -->
+<div class="flex flex-col gap-gutter">
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex flex-col justify-between h-full">
+<p class="font-label-caps text-label-caps text-on-surface-variant">SYNCED RECORDS</p>
+<div class="mt-2">
+<span class="font-data-mono text-3xl font-bold text-secondary">4,281</span>
+<div class="flex items-center gap-1 text-green-600 text-xs mt-1">
+<span class="material-symbols-outlined text-xs">trending_up</span>
+<span>+12 today</span>
+</div>
+</div>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 flex flex-col justify-between h-full">
+<p class="font-label-caps text-label-caps text-on-surface-variant">AVG LATENCY</p>
+<div class="mt-2">
+<span class="font-data-mono text-3xl font-bold text-on-surface">1.2s</span>
+<p class="text-on-surface-variant text-xs mt-1">Stable connection</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Current Status Detail Card -->
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+<div class="p-4 border-b border-outline-variant flex justify-between items-center bg-surface-container-low/50">
+<span class="font-label-caps text-label-caps text-on-surface-variant">ACTIVE CONNECTION PROFILE</span>
+<span class="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-label-caps text-[10px]">REST API v2.0</span>
+</div>
+<div class="p-4 grid grid-cols-2 gap-4">
+<div>
+<p class="text-xs text-on-surface-variant mb-1">Source Endpoint</p>
+<p class="font-data-mono text-xs truncate">canvas.instructure.com/api/v1</p>
+</div>
+<div>
+<p class="text-xs text-on-surface-variant mb-1">Auth Status</p>
+<div class="flex items-center gap-1">
+<div class="w-2 h-2 rounded-full bg-green-500"></div>
+<p class="font-body-md font-semibold">Valid OAuth2</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Scrollable Sync Logs -->
+<section class="space-y-3">
+<div class="flex justify-between items-end px-1">
+<h3 class="font-headline-md text-headline-md text-on-background">Recent Activity</h3>
+<button class="text-secondary font-label-caps text-label-caps hover:underline">Download CSV</button>
+</div>
+<div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden">
+<div class="max-h-[400px] overflow-y-auto">
+<!-- Log Item 1 -->
+<div class="flex items-start gap-4 p-4 border-b border-outline-variant hover:bg-surface-container-low transition-colors group">
+<div class="mt-1 w-8 h-8 rounded bg-green-50 flex items-center justify-center text-green-600">
+<span class="material-symbols-outlined text-lg">check</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-center mb-0.5">
+<span class="font-body-lg font-semibold text-on-surface">Full Batch Sync Complete</span>
+<span class="font-data-mono text-xs text-on-surface-variant">09:42:11</span>
+</div>
+<p class="text-sm text-on-surface-variant mb-2">Processed 2,104 course enrollments and updated 42 user profiles.</p>
+<div class="flex gap-2">
+<span class="px-2 py-0.5 bg-surface-container-high rounded text-[10px] font-data-mono">Status: 200 OK</span>
+<span class="px-2 py-0.5 bg-surface-container-high rounded text-[10px] font-data-mono">Size: 4.2MB</span>
+</div>
+</div>
+</div>
+<!-- Log Item 2 -->
+<div class="flex items-start gap-4 p-4 border-b border-outline-variant hover:bg-surface-container-low transition-colors group">
+<div class="mt-1 w-8 h-8 rounded bg-amber-50 flex items-center justify-center text-amber-600">
+<span class="material-symbols-outlined text-lg">warning</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-center mb-0.5">
+<span class="font-body-lg font-semibold text-on-surface">Partial Record Mismatch</span>
+<span class="font-data-mono text-xs text-on-surface-variant">08:00:04</span>
+</div>
+<p class="text-sm text-on-surface-variant mb-2">4 student IDs not found in local SIS. Skipping entries for next cycle.</p>
+<button class="text-xs text-secondary font-semibold group-hover:underline">View Conflict Details</button>
+</div>
+</div>
+<!-- Log Item 3 -->
+<div class="flex items-start gap-4 p-4 border-b border-outline-variant hover:bg-surface-container-low transition-colors group">
+<div class="mt-1 w-8 h-8 rounded bg-green-50 flex items-center justify-center text-green-600">
+<span class="material-symbols-outlined text-lg">check</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-center mb-0.5">
+<span class="font-body-lg font-semibold text-on-surface">Incremental Update</span>
+<span class="font-data-mono text-xs text-on-surface-variant">07:30:15</span>
+</div>
+<p class="text-sm text-on-surface-variant mb-2">Web-hook triggered update for User UID:88291.</p>
+</div>
+</div>
+<!-- Log Item 4 (Error State) -->
+<div class="flex items-start gap-4 p-4 border-b border-outline-variant hover:bg-surface-container-low transition-colors group">
+<div class="mt-1 w-8 h-8 rounded bg-error-container/20 flex items-center justify-center text-error">
+<span class="material-symbols-outlined text-lg">error</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-center mb-0.5">
+<span class="font-body-lg font-semibold text-on-surface">Socket Connection Timeout</span>
+<span class="font-data-mono text-xs text-on-surface-variant">04:11:59</span>
+</div>
+<p class="text-sm text-on-surface-variant mb-2">Failed to reach LMS endpoint within 10,000ms. Automatic retry in 5 minutes.</p>
+<span class="px-2 py-0.5 bg-error-container text-on-error-container rounded text-[10px] font-data-mono">Err: ETIMEDOUT</span>
+</div>
+</div>
+<!-- Log Item 5 -->
+<div class="flex items-start gap-4 p-4 hover:bg-surface-container-low transition-colors group">
+<div class="mt-1 w-8 h-8 rounded bg-green-50 flex items-center justify-center text-green-600">
+<span class="material-symbols-outlined text-lg">check</span>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex justify-between items-center mb-0.5">
+<span class="font-body-lg font-semibold text-on-surface">System Health Check</span>
+<span class="font-data-mono text-xs text-on-surface-variant">Yesterday</span>
+</div>
+<p class="text-sm text-on-surface-variant">Automated daily diagnostic pass: No issues found.</p>
+</div>
+</div>
+</div>
+<div class="p-3 text-center bg-surface-container-low/30 border-t border-outline-variant">
+<button class="text-on-surface-variant font-label-caps text-xs hover:text-secondary transition-colors">Load Older Entries</button>
+</div>
+</div>
+</section>
+</main>
+<!-- BottomNavBar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-2 bg-surface-container border-t border-outline-variant">
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-3 py-1" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-label-caps text-label-caps mt-1">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-secondary bg-secondary-container/10 rounded-xl px-3 py-1" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">sync_alt</span>
+<span class="font-label-caps text-label-caps mt-1">LMS Sync</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-3 py-1" href="#">
+<span class="material-symbols-outlined">forum</span>
+<span class="font-label-caps text-label-caps mt-1">Messenger</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant px-3 py-1" href="#">
+<div class="relative">
+<span class="material-symbols-outlined">warning</span>
+<span class="absolute top-0 right-0 w-1.5 h-1.5 bg-error rounded-full"></span>
+</div>
+<span class="font-label-caps text-label-caps mt-1">Alerts</span>
+</a>
+</nav>
+<script>
+        function simulateSync() {
+            const btn = document.querySelector('button[onclick="simulateSync()"]');
+            const progress = document.getElementById('sync-progress-bar');
+            const originalText = btn.innerHTML;
+            
+            btn.disabled = true;
+            btn.innerHTML = `<span class="material-symbols-outlined animate-spin text-sm">sync</span> Syncing...`;
+            btn.classList.add('opacity-50');
+            
+            progress.style.width = '0%';
+            
+            let width = 0;
+            const interval = setInterval(() => {
+                if (width >= 100) {
+                    clearInterval(interval);
+                    btn.disabled = false;
+                    btn.innerHTML = `<span class="material-symbols-outlined text-sm">check</span> Done`;
+                    btn.classList.remove('opacity-50');
+                    btn.classList.replace('bg-primary', 'bg-green-600');
+                    
+                    setTimeout(() => {
+                        btn.innerHTML = originalText;
+                        btn.classList.replace('bg-green-600', 'bg-primary');
+                        progress.style.width = '65%';
+                    }, 2000);
+                } else {
+                    width += Math.random() * 5;
+                    if (width > 100) width = 100;
+                    progress.style.width = width + '%';
+                }
+            }, 100);
+        }
+    </script>
+</body></html>
