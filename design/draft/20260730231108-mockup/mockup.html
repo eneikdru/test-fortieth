@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>DocArchive - Search &amp; Discover</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;family=JetBrains+Mono&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary-fixed-dim": "#adc7f7",
+                        "surface-container": "#e7eeff",
+                        "outline": "#74777f",
+                        "on-secondary-fixed": "#001d37",
+                        "tertiary-fixed-dim": "#c1c7cf",
+                        "on-primary-fixed": "#001b3c",
+                        "secondary-fixed": "#d2e4ff",
+                        "on-surface-variant": "#43474e",
+                        "tertiary-fixed": "#dde3eb",
+                        "on-primary-fixed-variant": "#2d476f",
+                        "surface": "#f9f9ff",
+                        "inverse-on-surface": "#ebf1ff",
+                        "primary": "#002045",
+                        "error-container": "#ffdad6",
+                        "secondary": "#0061a5",
+                        "outline-variant": "#c4c6cf",
+                        "surface-container-highest": "#d8e3fa",
+                        "on-surface": "#111c2c",
+                        "primary-container": "#1a365d",
+                        "secondary-fixed-dim": "#9fcaff",
+                        "surface-container-low": "#f0f3ff",
+                        "primary-fixed": "#d6e3ff",
+                        "on-error-container": "#93000a",
+                        "on-tertiary-fixed-variant": "#41474e",
+                        "surface-tint": "#455f88",
+                        "inverse-surface": "#263142",
+                        "on-tertiary": "#ffffff",
+                        "on-background": "#111c2c",
+                        "on-primary": "#ffffff",
+                        "on-secondary-fixed-variant": "#00497e",
+                        "surface-dim": "#cfdaf1",
+                        "error": "#ba1a1a",
+                        "on-tertiary-fixed": "#161c22",
+                        "inverse-primary": "#adc7f7",
+                        "on-tertiary-container": "#989fa6",
+                        "tertiary-container": "#30363c",
+                        "on-primary-container": "#86a0cd",
+                        "surface-variant": "#d8e3fa",
+                        "background": "#f9f9ff",
+                        "surface-bright": "#f9f9ff",
+                        "tertiary": "#1b2127",
+                        "on-secondary": "#ffffff",
+                        "on-error": "#ffffff",
+                        "secondary-container": "#66affe",
+                        "on-secondary-container": "#004172",
+                        "surface-container-high": "#dee8ff",
+                        "surface-container-lowest": "#ffffff"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "container-margin": "20px",
+                        "unit": "4px",
+                        "stack-lg": "24px",
+                        "stack-md": "16px",
+                        "gutter-md": "16px",
+                        "stack-sm": "8px"
+                    },
+                    "fontFamily": {
+                        "headline-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "code-sm": ["JetBrains Mono"],
+                        "headline-xl": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "headline-lg-mobile": ["Inter"],
+                        "headline-md": ["Inter"]
+                    },
+                    "fontSize": {
+                        "headline-lg": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                        "body-md": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                        "code-sm": ["12px", {"lineHeight": "18px", "fontWeight": "400"}],
+                        "headline-xl": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                        "label-caps": ["12px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "700"}],
+                        "headline-lg-mobile": ["20px", {"lineHeight": "28px", "fontWeight": "600"}],
+                        "headline-md": ["18px", {"lineHeight": "24px", "fontWeight": "600"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-surface text-on-surface">
+<!-- TopAppBar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-container-margin h-14 bg-surface border-b border-outline-variant shadow-none">
+<div class="flex items-center gap-stack-sm">
+<span class="material-symbols-outlined text-primary" data-icon="menu">menu</span>
+<h1 class="font-headline-lg-mobile text-headline-lg-mobile font-bold text-primary">DocArchive</h1>
+</div>
+<div class="w-8 h-8 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional headshot of a young knowledge worker with a neutral expression, wearing minimalist spectacles and a charcoal blazer. The background is a clean, out-of-focus modern office space with soft daylight filtering through. High-key lighting highlights the sharp, clean professional aesthetic of the DocArchive platform." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBCmnfjD3e0K9UwrI7DF-LDxaG25ppDNl_9raH63Mk5dSIe61-VGdMajG3iSoV5QqO6fTi2OY8D7Ug6j9ScVEzK7KCKI-Eexi3Z_rTg0-_OUPtzfJK6mZK_EeBKW7tsN2TrIeC5oPbera8wtZFkE8LszbinMd8sKd42IKL37TjWtxD4wadAYv6hg9Y4PrVjHpWNEG65xN0rn7BawtQLxPgZbnIIX4Zi1Y7R-gH-Wc9vydtfPCrTpgyyYJzKH-oC2Ggivtjw520zQFY"/>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-14 pb-20 px-container-margin max-w-[1200px] mx-auto min-h-screen">
+<!-- Persistent Search Bar & Filter -->
+<section class="mt-stack-md">
+<div class="flex gap-stack-sm items-center">
+<div class="flex-grow flex items-center bg-[#EDF2F7] h-12 px-stack-md rounded-xl transition-all border border-transparent focus-within:border-secondary">
+<span class="material-symbols-outlined text-on-surface-variant mr-stack-sm" data-icon="search">search</span>
+<input class="bg-transparent border-none focus:ring-0 w-full text-body-md font-body-md text-on-surface placeholder:text-on-surface-variant" placeholder="Search archives..." type="text"/>
+</div>
+<button class="h-12 w-12 flex items-center justify-center border border-outline-variant rounded-xl hover:bg-surface-container transition-colors active:scale-95">
+<span class="material-symbols-outlined text-on-surface" data-icon="tune">tune</span>
+</button>
+</div>
+</section>
+<!-- Recently Viewed (Horizontal Scrolling) -->
+<section class="mt-stack-lg">
+<div class="flex items-center justify-between mb-stack-sm">
+<h2 class="font-headline-md text-headline-md text-on-surface">Recently Viewed</h2>
+<button class="text-secondary font-label-caps text-label-caps hover:underline">SEE ALL</button>
+</div>
+<div class="flex overflow-x-auto gap-stack-md hide-scrollbar pb-stack-sm -mx-2 px-2">
+<!-- Recent Card 1 -->
+<div class="min-w-[160px] max-w-[160px] bg-white border border-outline-variant rounded-xl p-stack-sm shadow-[0px_2px_4px_rgba(0,0,0,0.05)] hover:border-secondary transition-all cursor-pointer">
+<div class="h-20 w-full rounded-lg bg-surface-container mb-stack-sm overflow-hidden relative">
+<span class="absolute top-1 right-1 material-symbols-outlined text-error text-[18px]" data-icon="picture_as_pdf" style="font-variation-settings: 'FILL' 1;">picture_as_pdf</span>
+<div class="absolute inset-0 bg-gradient-to-tr from-surface-container-highest to-transparent opacity-50"></div>
+</div>
+<p class="font-headline-md text-[14px] leading-tight text-on-surface line-clamp-2">Q4 Financial Projections</p>
+<p class="font-label-caps text-[10px] text-on-surface-variant mt-1">2.4 MB • 2H AGO</p>
+</div>
+<!-- Recent Card 2 -->
+<div class="min-w-[160px] max-w-[160px] bg-white border border-outline-variant rounded-xl p-stack-sm shadow-[0px_2px_4px_rgba(0,0,0,0.05)] hover:border-secondary transition-all cursor-pointer">
+<div class="h-20 w-full rounded-lg bg-surface-container mb-stack-sm overflow-hidden relative">
+<span class="absolute top-1 right-1 material-symbols-outlined text-secondary text-[18px]" data-icon="description" style="font-variation-settings: 'FILL' 1;">description</span>
+<div class="absolute inset-0 bg-gradient-to-tr from-surface-container-highest to-transparent opacity-50"></div>
+</div>
+<p class="font-headline-md text-[14px] leading-tight text-on-surface line-clamp-2">Research Methodology v2</p>
+<p class="font-label-caps text-[10px] text-on-surface-variant mt-1">156 KB • 5H AGO</p>
+</div>
+<!-- Recent Card 3 -->
+<div class="min-w-[160px] max-w-[160px] bg-white border border-outline-variant rounded-xl p-stack-sm shadow-[0px_2px_4px_rgba(0,0,0,0.05)] hover:border-secondary transition-all cursor-pointer">
+<div class="h-20 w-full rounded-lg bg-surface-container mb-stack-sm overflow-hidden relative">
+<span class="absolute top-1 right-1 material-symbols-outlined text-green-600 text-[18px]" data-icon="table_chart" style="font-variation-settings: 'FILL' 1;">table_chart</span>
+<div class="absolute inset-0 bg-gradient-to-tr from-surface-container-highest to-transparent opacity-50"></div>
+</div>
+<p class="font-headline-md text-[14px] leading-tight text-on-surface line-clamp-2">Annual User Growth Stats</p>
+<p class="font-label-caps text-[10px] text-on-surface-variant mt-1">4.1 MB • YESTERDAY</p>
+</div>
+</div>
+</section>
+<!-- Suggested Documents (Vertical List) -->
+<section class="mt-stack-lg">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-stack-sm">Suggested Documents</h2>
+<div class="flex flex-col gap-stack-md">
+<!-- Suggested Item 1 -->
+<div class="flex items-center p-stack-md bg-white border border-outline-variant rounded-xl shadow-[0px_2px_4px_rgba(0,0,0,0.05)] hover:border-secondary transition-all cursor-pointer group">
+<div class="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-error-container rounded-lg mr-stack-md">
+<span class="material-symbols-outlined text-error" data-icon="picture_as_pdf">picture_as_pdf</span>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start">
+<h3 class="font-headline-md text-headline-md text-on-surface group-hover:text-secondary transition-colors">Strategic Plan 2024.pdf</h3>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="more_vert">more_vert</span>
+</div>
+<p class="text-body-md font-body-md text-on-surface-variant line-clamp-1 mb-1">Detailed roadmap for international expansion and R&amp;D allocation...</p>
+<div class="flex items-center gap-stack-sm text-label-caps font-label-caps text-outline">
+<span>PDF</span>
+<span class="w-1 h-1 bg-outline rounded-full"></span>
+<span>12.8 MB</span>
+<span class="w-1 h-1 bg-outline rounded-full"></span>
+<span>UPDATED OCT 24</span>
+</div>
+</div>
+</div>
+<!-- Suggested Item 2 -->
+<div class="flex items-center p-stack-md bg-white border border-outline-variant rounded-xl shadow-[0px_2px_4px_rgba(0,0,0,0.05)] hover:border-secondary transition-all cursor-pointer group">
+<div class="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-secondary-container rounded-lg mr-stack-md">
+<span class="material-symbols-outlined text-on-secondary-container" data-icon="description">description</span>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start">
+<h3 class="font-headline-md text-headline-md text-on-surface group-hover:text-secondary transition-colors">Client Onboarding Specs.docx</h3>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="more_vert">more_vert</span>
+</div>
+<p class="text-body-md font-body-md text-on-surface-variant line-clamp-1 mb-1">Technical requirements and security protocols for new tier-1 partners...</p>
+<div class="flex items-center gap-stack-sm text-label-caps font-label-caps text-outline">
+<span>WORD</span>
+<span class="w-1 h-1 bg-outline rounded-full"></span>
+<span>450 KB</span>
+<span class="w-1 h-1 bg-outline rounded-full"></span>
+<span>UPDATED OCT 22</span>
+</div>
+</div>
+</div>
+<!-- Suggested Item 3 -->
+<div class="flex items-center p-stack-md bg-white border border-outline-variant rounded-xl shadow-[0px_2px_4px_rgba(0,0,0,0.05)] hover:border-secondary transition-all cursor-pointer group">
+<div class="w-12 h-12 flex-shrink-0 flex items-center justify-center bg-surface-container-highest rounded-lg mr-stack-md">
+<span class="material-symbols-outlined text-on-surface" data-icon="table_chart">table_chart</span>
+</div>
+<div class="flex-grow">
+<div class="flex justify-between items-start">
+<h3 class="font-headline-md text-headline-md text-on-surface group-hover:text-secondary transition-colors">Marketing Budget.xlsx</h3>
+<span class="material-symbols-outlined text-on-surface-variant text-[20px]" data-icon="more_vert">more_vert</span>
+</div>
+<p class="text-body-md font-body-md text-on-surface-variant line-clamp-1 mb-1">Quarterly spend breakdown across social, PPC, and event channels...</p>
+<div class="flex items-center gap-stack-sm text-label-caps font-label-caps text-outline">
+<span>EXCEL</span>
+<span class="w-1 h-1 bg-outline rounded-full"></span>
+<span>1.2 MB</span>
+<span class="w-1 h-1 bg-outline rounded-full"></span>
+<span>UPDATED OCT 20</span>
+</div>
+</div>
+</div>
+<!-- Empty State Visual Cue -->
+<div class="mt-stack-lg border-2 border-dashed border-outline-variant rounded-xl p-stack-lg text-center bg-surface-container-low">
+<span class="material-symbols-outlined text-outline text-[48px] mb-stack-sm" data-icon="upload_file">upload_file</span>
+<p class="text-headline-md font-headline-md text-on-surface">No more suggestions</p>
+<p class="text-body-md font-body-md text-on-surface-variant mt-1">Upload more documents to refine your feed.</p>
+<button class="mt-stack-md bg-primary text-on-primary px-stack-lg py-stack-sm rounded-full font-label-caps text-label-caps hover:opacity-90 active:scale-95 transition-all">UPLOAD NOW</button>
+</div>
+</div>
+</section>
+</main>
+<!-- Navigation Shell -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center h-16 pb-safe bg-surface border-t border-outline-variant">
+<div class="flex flex-col items-center justify-center text-secondary font-bold active:scale-95 transition-transform cursor-pointer">
+<span class="material-symbols-outlined" data-icon="search" style="font-variation-settings: 'FILL' 1;">search</span>
+<span class="font-label-caps text-label-caps mt-0.5">Search</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-secondary transition-colors active:scale-95 transition-transform cursor-pointer">
+<span class="material-symbols-outlined" data-icon="folder_open">folder_open</span>
+<span class="font-label-caps text-label-caps mt-0.5">Browse</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-secondary transition-colors active:scale-95 transition-transform cursor-pointer">
+<span class="material-symbols-outlined" data-icon="history">history</span>
+<span class="font-label-caps text-label-caps mt-0.5">History</span>
+</div>
+<div class="flex flex-col items-center justify-center text-on-surface-variant hover:text-secondary transition-colors active:scale-95 transition-transform cursor-pointer">
+<span class="material-symbols-outlined" data-icon="person">person</span>
+<span class="font-label-caps text-label-caps mt-0.5">Profile</span>
+</div>
+</nav>
+<!-- FAB for mobile - Uploading is central to the UX -->
+<button class="fixed bottom-20 right-container-margin w-14 h-14 bg-primary-container text-on-primary-container rounded-full shadow-md flex items-center justify-center active:scale-90 transition-transform z-40">
+<span class="material-symbols-outlined text-[28px]" data-icon="add">add</span>
+</button>
+<script>
+        // Micro-interaction for search bar focus
+        const searchInput = document.querySelector('input[type="text"]');
+        const searchContainer = searchInput.parentElement;
+        
+        searchInput.addEventListener('focus', () => {
+            searchContainer.classList.remove('bg-[#EDF2F7]');
+            searchContainer.classList.add('bg-white', 'shadow-md');
+        });
+        
+        searchInput.addEventListener('blur', () => {
+            searchContainer.classList.add('bg-[#EDF2F7]');
+            searchContainer.classList.remove('bg-white', 'shadow-md');
+        });
+
+        // Simple smooth horizontal scroll for touch devices
+        const scrollContainer = document.querySelector('.hide-scrollbar');
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+
+        scrollContainer.addEventListener('mousedown', (e) => {
+            isDown = true;
+            startX = e.pageX - scrollContainer.offsetLeft;
+            scrollLeft = scrollContainer.scrollLeft;
+        });
+        scrollContainer.addEventListener('mouseleave', () => {
+            isDown = false;
+        });
+        scrollContainer.addEventListener('mouseup', () => {
+            isDown = false;
+        });
+        scrollContainer.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - scrollContainer.offsetLeft;
+            const walk = (x - startX) * 2;
+            scrollContainer.scrollLeft = scrollLeft - walk;
+        });
+    </script>
+</body></html>
