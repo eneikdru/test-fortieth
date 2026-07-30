@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Document Detail | FBUN Research Institute</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .version-row:hover .version-action {
+            opacity: 1;
+        }
+        .document-canvas {
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05), 0 1px 2px rgba(0,0,0,0.1);
+        }
+    </style>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "secondary-container": "#da3433",
+                      "on-primary-container": "#9bbdff",
+                      "on-tertiary-container": "#ffa77e",
+                      "primary-container": "#004a99",
+                      "tertiary": "#5f2200",
+                      "surface-container-highest": "#d7e4ec",
+                      "on-secondary-fixed": "#410003",
+                      "inverse-surface": "#263238",
+                      "on-error": "#ffffff",
+                      "error": "#ba1a1a",
+                      "outline": "#737783",
+                      "on-secondary-container": "#fffbff",
+                      "on-tertiary": "#ffffff",
+                      "inverse-primary": "#abc7ff",
+                      "outline-variant": "#c2c6d3",
+                      "secondary-fixed": "#ffdad6",
+                      "on-surface": "#111d23",
+                      "error-container": "#ffdad6",
+                      "surface-container-high": "#ddeaf2",
+                      "primary": "#00346f",
+                      "tertiary-container": "#833301",
+                      "primary-fixed-dim": "#abc7ff",
+                      "surface-tint": "#255dad",
+                      "on-secondary": "#ffffff",
+                      "inverse-on-surface": "#e6f3fb",
+                      "background": "#f4faff",
+                      "surface-container-lowest": "#ffffff",
+                      "on-tertiary-fixed-variant": "#7b2f00",
+                      "secondary-fixed-dim": "#ffb3ac",
+                      "surface-container": "#e3f0f8",
+                      "surface-variant": "#d7e4ec",
+                      "on-primary-fixed-variant": "#00458f",
+                      "secondary": "#b6171e",
+                      "on-secondary-fixed-variant": "#930010",
+                      "primary-fixed": "#d7e2ff",
+                      "on-error-container": "#93000a",
+                      "on-surface-variant": "#424751",
+                      "surface-bright": "#f4faff",
+                      "on-primary": "#ffffff",
+                      "on-tertiary-fixed": "#351000",
+                      "tertiary-fixed-dim": "#ffb694",
+                      "tertiary-fixed": "#ffdbcc",
+                      "on-background": "#111d23",
+                      "surface-container-low": "#e9f6fd",
+                      "on-primary-fixed": "#001b3f",
+                      "surface-dim": "#cfdce4",
+                      "surface": "#f4faff"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "spacing": {
+                      "max-width": "1280px",
+                      "unit": "4px",
+                      "gutter": "16px",
+                      "margin-mobile": "16px",
+                      "margin-desktop": "32px"
+              },
+              "fontFamily": {
+                      "body-lg": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "label-md": ["Inter"],
+                      "body-md": ["Inter"],
+                      "label-sm": ["Inter"],
+                      "display-lg": ["Inter"],
+                      "headline-lg-mobile": ["Inter"],
+                      "headline-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "body-lg": ["18px", {"lineHeight": "28px", "fontWeight": "400"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "fontWeight": "600"}],
+                      "label-md": ["14px", {"lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "600"}],
+                      "body-md": ["16px", {"lineHeight": "24px", "fontWeight": "400"}],
+                      "label-sm": ["12px", {"lineHeight": "16px", "fontWeight": "500"}],
+                      "display-lg": ["48px", {"lineHeight": "56px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                      "headline-lg-mobile": ["24px", {"lineHeight": "32px", "fontWeight": "700"}],
+                      "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.01em", "fontWeight": "700"}]
+              }
+            },
+          },
+        }
+      </script>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface font-body-md overflow-x-hidden">
+<!-- Top App Bar -->
+<header class="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-margin-mobile md:px-margin-desktop h-16 bg-surface border-b border-outline-variant">
+<div class="flex items-center gap-4">
+<button class="md:hidden p-2 hover:bg-surface-container-low transition-colors rounded-full">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<h1 class="font-headline-md text-headline-md font-bold text-primary">FBUN Research Institute</h1>
+</div>
+<div class="flex items-center gap-3">
+<span class="hidden md:inline-block px-3 py-1 bg-surface-container-highest text-on-surface-variant font-label-sm text-label-sm rounded-full">Researcher Access: Level 3</span>
+<div class="w-10 h-10 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional close-up portrait of a male researcher in his late 30s with short hair and glasses. He is wearing a clean white laboratory coat and a light blue shirt. The background is a blurred high-tech medical research facility with soft, clean lighting and a cool blue and white color palette, reflecting a modern corporate clinical environment." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB6ln4-cc9meChyzYufan1w3yRnsEjGUmT7HN-na4Eax4upbMoaKZ7QTJDih5m85VmEHj-0IMGNtZv2NgFbSXSghepRfHVC5QSyxDAs-r9Wh-NcgqPim6KQW-GGOt5ZTc7Y3YZnjq0b3-LKB017AWOiKeha6zod4m_mRMXa_qakBMc8z0W4WQrYt1KIqs2-rfPid0bgNWD-M8s_NMXKcKn9WEyQTfAkzBdyBES9RRyUMEid9YWDPwU0CMHmyhDyegwywoByX8UF4fd2"/>
+</div>
+</div>
+</header>
+<!-- Navigation Drawer (Desktop) -->
+<aside class="hidden md:flex fixed inset-y-0 left-0 z-[60] w-80 bg-surface border-r border-outline-variant flex-col pt-20">
+<div class="px-6 pb-8 border-b border-outline-variant mb-4">
+<div class="flex items-center gap-4 mb-2">
+<div class="w-12 h-12 rounded-full bg-surface-container-high flex items-center justify-center border border-outline-variant">
+<span class="material-symbols-outlined text-primary" data-icon="account_circle">account_circle</span>
+</div>
+<div>
+<h2 class="font-label-md text-label-md text-on-surface">Alexander Petrov</h2>
+<p class="text-on-surface-variant text-label-sm font-label-sm">Researcher / Admin</p>
+</div>
+</div>
+</div>
+<nav class="flex-1 flex flex-col gap-1 px-2">
+<a class="flex items-center gap-4 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-r-full transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+<span class="font-label-md text-label-md">Dashboard</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-r-full transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="gavel">gavel</span>
+<span class="font-label-md text-label-md">Regulatory</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 bg-primary-container text-on-primary-container rounded-r-full border-l-4 border-primary scale-95 duration-100" href="#">
+<span class="material-symbols-outlined" data-icon="school">school</span>
+<span class="font-label-md text-label-md">Educational</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-r-full transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="verified">verified</span>
+<span class="font-label-md text-label-md">Certification</span>
+</a>
+<a class="flex items-center gap-4 px-4 py-3 text-on-surface-variant hover:bg-surface-container-high rounded-r-full transition-all" href="#">
+<span class="material-symbols-outlined" data-icon="biotech">biotech</span>
+<span class="font-label-md text-label-md">Practice</span>
+</a>
+</nav>
+</aside>
+<!-- Main Content Area -->
+<main class="pt-24 pb-20 md:pb-8 px-margin-mobile md:pl-[340px] md:pr-margin-desktop min-h-screen">
+<!-- Breadcrumbs & Document Title Header -->
+<section class="mb-8">
+<div class="flex items-center gap-2 text-on-surface-variant text-label-sm font-label-sm mb-4">
+<a class="hover:text-primary transition-colors" href="#">Archive</a>
+<span class="material-symbols-outlined text-[14px]" data-icon="chevron_right">chevron_right</span>
+<a class="hover:text-primary transition-colors" href="#">Regulatory Frameworks</a>
+<span class="material-symbols-outlined text-[14px]" data-icon="chevron_right">chevron_right</span>
+<span class="text-on-surface">Education Center</span>
+</div>
+<div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div class="flex-1 max-w-3xl">
+<div class="flex items-center gap-3 mb-3">
+<span class="px-2 py-0.5 bg-primary text-on-primary text-label-sm font-label-sm rounded uppercase tracking-wider">Active</span>
+<span class="text-on-surface-variant font-label-sm text-label-sm">Ref ID: EDI-2024-081</span>
+</div>
+<h2 class="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface leading-tight">
+                        Regulation on GIA for Residents 2024-2027
+                    </h2>
+</div>
+<div class="flex flex-wrap gap-2">
+<button class="flex items-center gap-2 px-4 py-2 border border-outline text-primary font-label-md text-label-md hover:bg-surface-container-low transition-colors rounded">
+<span class="material-symbols-outlined" data-icon="share">share</span>
+                        Share Link
+                    </button>
+<button class="flex items-center gap-2 px-6 py-2 bg-primary text-on-primary font-label-md text-label-md hover:opacity-90 transition-opacity rounded">
+<span class="material-symbols-outlined" data-icon="download">download</span>
+                        Download PDF
+                    </button>
+</div>
+</div>
+</section>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Left Column: Document Detail Canvas -->
+<div class="lg:col-span-8 space-y-8">
+<!-- Metadata Card -->
+<div class="bg-surface border border-outline-variant p-6 md:p-8 document-canvas">
+<h3 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest mb-6 border-b border-outline-variant pb-2">Document Metadata</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-y-6 gap-x-12">
+<div class="flex flex-col gap-1">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Version</span>
+<span class="text-body-md font-semibold text-on-surface">v2.1 (Current Revision)</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Responsible Dept.</span>
+<span class="text-body-md font-semibold text-on-surface">Educational Center</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Approval Date</span>
+<span class="text-body-md font-semibold text-on-surface">October 14, 2023</span>
+</div>
+<div class="flex flex-col gap-1">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Security Level</span>
+<span class="text-body-md font-semibold text-on-surface">Internal Institute Access</span>
+</div>
+<div class="flex flex-col gap-1 md:col-span-2">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Brief Scope</span>
+<p class="text-body-md text-on-surface">This document outlines the procedural requirements, assessment criteria, and logistical framework for the State Final Examination (GIA) for residency programs between the academic years 2024 and 2027.</p>
+</div>
+</div>
+</div>
+<!-- Version History Accordion -->
+<div class="bg-surface border border-outline-variant overflow-hidden document-canvas">
+<button class="w-full flex items-center justify-between p-6 md:px-8 hover:bg-surface-container-low transition-colors" onclick="toggleAccordion('version-history')">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary" data-icon="history">history</span>
+<h3 class="font-headline-md text-headline-md">Version History</h3>
+</div>
+<span class="material-symbols-outlined transition-transform duration-300" data-icon="expand_more" id="version-chevron">expand_more</span>
+</button>
+<div class="px-6 md:px-8 pb-6 space-y-4" id="version-content">
+<!-- V2.0 -->
+<div class="version-row flex items-center justify-between p-4 border border-outline-variant hover:border-primary transition-colors bg-surface-container-lowest">
+<div class="flex items-center gap-6">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface">v2.0</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">Jan 2023</span>
+</div>
+<div class="h-8 w-[1px] bg-outline-variant"></div>
+<div class="flex flex-col">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Status</span>
+<span class="text-label-md font-label-md text-outline">Archived</span>
+</div>
+</div>
+<div class="version-action opacity-0 flex gap-2 transition-opacity">
+<button class="p-2 hover:bg-surface-container-high text-primary rounded-full" title="Download">
+<span class="material-symbols-outlined text-[20px]" data-icon="download">download</span>
+</button>
+<button class="p-2 hover:bg-surface-container-high text-primary rounded-full" title="View details">
+<span class="material-symbols-outlined text-[20px]" data-icon="visibility">visibility</span>
+</button>
+</div>
+</div>
+<!-- V1.5 -->
+<div class="version-row flex items-center justify-between p-4 border border-outline-variant hover:border-primary transition-colors bg-surface-container-lowest opacity-80">
+<div class="flex items-center gap-6">
+<div class="flex flex-col">
+<span class="font-label-md text-label-md text-on-surface">v1.5</span>
+<span class="text-label-sm font-label-sm text-on-surface-variant">May 2022</span>
+</div>
+<div class="h-8 w-[1px] bg-outline-variant"></div>
+<div class="flex flex-col">
+<span class="text-label-sm font-label-sm text-on-surface-variant">Status</span>
+<span class="text-label-md font-label-md text-outline">Archived</span>
+</div>
+</div>
+<div class="version-action opacity-0 flex gap-2 transition-opacity">
+<button class="p-2 hover:bg-surface-container-high text-primary rounded-full">
+<span class="material-symbols-outlined text-[20px]" data-icon="download">download</span>
+</button>
+<button class="p-2 hover:bg-surface-container-high text-primary rounded-full">
+<span class="material-symbols-outlined text-[20px]" data-icon="visibility">visibility</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Discussion & Comments -->
+<div class="bg-surface border border-outline-variant p-6 md:p-8 document-canvas">
+<div class="flex items-center justify-between mb-6">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary" data-icon="chat_bubble_outline">chat_bubble_outline</span>
+<h3 class="font-headline-md text-headline-md">Feedback &amp; Clarifications</h3>
+</div>
+<button class="bg-surface-container-high px-4 py-2 font-label-md text-label-md text-primary rounded hover:bg-surface-container-highest transition-colors">
+                            Request Update
+                        </button>
+</div>
+<div class="space-y-6">
+<div class="flex gap-4">
+<div class="w-10 h-10 shrink-0 rounded bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed font-bold">EM</div>
+<div class="flex-1 bg-surface-container-low p-4 rounded-lg">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-md text-label-md text-on-surface">Dr. Elena Morozova</span>
+<span class="text-label-sm text-on-surface-variant">2 days ago</span>
+</div>
+<p class="text-body-md text-on-surface">Are there any changes planned for the scoring system of the practical component in the 2025 cycle?</p>
+</div>
+</div>
+<div class="flex gap-4 items-center px-4 py-2 border-t border-outline-variant pt-6">
+<div class="w-10 h-10 shrink-0 rounded-full overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A small profile icon showing Alexander Petrov, a middle-aged male researcher with light brown hair and a calm, professional expression, set against a sterile laboratory background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBboiR4seBAablpTapuML7-RLcPXe2sYHpY2y152O2TElXs-MPTLZnaKZYG2TWe1tY91XWknmQ148GhJGoAXPX-54IWjrO60c5y2BuSQsrVKqP2OahivlXu0ZReCuVAUgXomF6A2Hsu8EdGzFcyVJrKsf5mEi_ODSctxMegMpPIGQY_K88M2zoyxVjB8rBU14PmXek4aZB2wY0dgx-52sFVUDlYQpkAlUfPGNyJVjSsuUV2wjhiJRcoPqA6Pe3wSvXiNiR7KH3uvtbj"/>
+</div>
+<input class="flex-1 bg-transparent border-none focus:ring-0 text-body-md italic text-on-surface-variant" placeholder="Write a comment or clinical note..." type="text"/>
+<button class="p-2 text-primary hover:bg-surface-container-low rounded-full">
+<span class="material-symbols-outlined" data-icon="send">send</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Sidebar Actions & Related -->
+<div class="lg:col-span-4 space-y-6">
+<!-- Quick Actions Card -->
+<div class="bg-primary text-on-primary p-6 md:p-8 shadow-lg">
+<h4 class="font-label-md text-label-md uppercase tracking-wider mb-6 opacity-80">Quick Actions</h4>
+<div class="grid grid-cols-1 gap-3">
+<button class="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 transition-colors rounded text-left">
+<span class="material-symbols-outlined" data-icon="description">description</span>
+<span class="font-label-md text-label-md">Download DOCX Template</span>
+</button>
+<button class="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 transition-colors rounded text-left">
+<span class="material-symbols-outlined" data-icon="print">print</span>
+<span class="font-label-md text-label-md">Print Full Document</span>
+</button>
+<button class="w-full flex items-center gap-3 px-4 py-3 bg-white/10 hover:bg-white/20 transition-colors rounded text-left">
+<span class="material-symbols-outlined" data-icon="content_copy">content_copy</span>
+<span class="font-label-md text-label-md">Copy Reference Citation</span>
+</button>
+</div>
+</div>
+<!-- Related Documents -->
+<div class="bg-surface border border-outline-variant p-6 document-canvas">
+<h4 class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest mb-4 border-b border-outline-variant pb-2">Related Artifacts</h4>
+<ul class="space-y-4">
+<li>
+<a class="group flex flex-col gap-1" href="#">
+<span class="text-label-md font-label-md text-primary group-hover:underline">GIA Protocol Form 02-B</span>
+<span class="text-label-sm text-on-surface-variant">Interactive PDF • 4.2 MB</span>
+</a>
+</li>
+<li>
+<a class="group flex flex-col gap-1" href="#">
+<span class="text-label-md font-label-md text-primary group-hover:underline">Resident Assessment Schema</span>
+<span class="text-label-sm text-on-surface-variant">Data Spreadsheet • 1.1 MB</span>
+</a>
+</li>
+<li>
+<a class="group flex flex-col gap-1" href="#">
+<span class="text-label-md font-label-md text-primary group-hover:underline">Institute Ethics Guideline</span>
+<span class="text-label-sm text-on-surface-variant">External Reference Link</span>
+</a>
+</li>
+</ul>
+</div>
+<!-- System Logs / Audit Trail (Subtle) -->
+<div class="px-6 py-4 bg-surface-container-low border border-outline-variant rounded">
+<h5 class="text-label-sm font-label-sm text-on-surface-variant uppercase mb-3">Recent Audit Trail</h5>
+<div class="space-y-2">
+<div class="flex items-start gap-2 text-label-sm">
+<span class="material-symbols-outlined text-[14px] mt-0.5 text-on-surface-variant" data-icon="update">update</span>
+<span class="text-on-surface-variant italic">Oct 14: Version 2.1 Approved by Board</span>
+</div>
+<div class="flex items-start gap-2 text-label-sm">
+<span class="material-symbols-outlined text-[14px] mt-0.5 text-on-surface-variant" data-icon="download">download</span>
+<span class="text-on-surface-variant">Oct 16: Downloaded 12 times today</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Navigation (Mobile Only) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 md:hidden flex justify-around items-center px-4 py-2 bg-surface border-t border-outline-variant">
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary" href="#">
+<span class="material-symbols-outlined" data-icon="home">home</span>
+<span class="font-label-sm text-label-sm">Home</span>
+</a>
+<a class="flex flex-col items-center justify-center bg-secondary-container text-on-secondary-container rounded-xl p-2 scale-90 duration-200" href="#">
+<span class="material-symbols-outlined" data-icon="library_books">library_books</span>
+<span class="font-label-sm text-label-sm">Library</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary" href="#">
+<span class="material-symbols-outlined" data-icon="search">search</span>
+<span class="font-label-sm text-label-sm">Search</span>
+</a>
+<a class="flex flex-col items-center justify-center text-on-surface-variant p-2 hover:text-primary" href="#">
+<span class="material-symbols-outlined" data-icon="account_circle">account_circle</span>
+<span class="font-label-sm text-label-sm">Profile</span>
+</a>
+</nav>
+<script>
+        function toggleAccordion(id) {
+            const content = document.getElementById(id + '-content');
+            const chevron = document.getElementById(id + '-chevron');
+            
+            if (content.classList.contains('hidden')) {
+                content.classList.remove('hidden');
+                chevron.style.transform = 'rotate(180deg)';
+            } else {
+                content.classList.add('hidden');
+                chevron.style.transform = 'rotate(0deg)';
+            }
+        }
+        
+        // Ensure version history starts visible but can be toggled
+        // No changes needed as it's visible by default in HTML above.
+    </script>
+</body></html>
