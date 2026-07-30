@@ -1,0 +1,302 @@
+{
+    "epics": [
+        {
+            "existingEpicId": null,
+            "title": "Knowledge Base Core System",
+            "jtbd": "When looking for normative and educational documents, I want to quickly find, read, and download the actual versions with correct access rights, so that I can prepare for classes, exams, or administrative tasks without using outdated files.",
+            "kanoClass": "Must-Be",
+            "cynefinDomain": "complicated",
+            "sixSigmaMetric": "Reduce average document search time to less than 2 seconds and decrease outdated document usage by 100%.",
+            "tocConstraintRef": "Information retrieval speed and document actuality bottleneck.",
+            "sourceIndex": 0,
+            "requirements": [
+                "R1: Full-text search and navigation with synonyms, filters, auto-complete, and saved searches.",
+                "R2: Content management supporting multiple file formats, versioning with history, tags, comments, and update requests.",
+                "R3: Role-based security and access control (Admin, Content-manager, Teacher, Student) with action logging.",
+                "R4: Document export (PDF/DOCX) and usage statistics API.",
+                "R5: Adaptive web interface for PC and mobile devices."
+            ],
+            "coverageComplete": true,
+            "slices": [
+                {
+                    "title": "Core System Architecture Spike",
+                    "roleTag": "BARCAN-TAG-09",
+                    "jtbd": "When implementing the knowledge base for this epic, I want to write an architectural decision record defining the stack and data flow, so that the team has a clear blueprint for development.",
+                    "acceptanceCriteria": "Given an initial project setup, When the architecture decision record is evaluated, Then it must specify the chosen database, search engine, and backend framework.\nGiven the decision record, When reviewed by the technical lead, Then it must be approved and merged as a markdown file.",
+                    "leanValue": "essential",
+                    "cynefinDomain": "complicated",
+                    "tocConstraintRef": "Initial architecture uncertainty",
+                    "sixSigmaMetric": "Decision record approved by all technical stakeholders without major revisions.",
+                    "hasUi": false,
+                    "requirementRefs": [
+                        "R1",
+                        "R2",
+                        "R3",
+                        "R4",
+                        "R5"
+                    ]
+                },
+                {
+                    "title": "Data Schema and Storage Strategy",
+                    "roleTag": "BARCAN-TAG-08",
+                    "jtbd": "When implementing the knowledge base for this epic, I want to define the relational tables, file storage paths, and audit logs, so that documents and their versions are safely persisted.",
+                    "acceptanceCriteria": "Given the database schema script, When executed, Then it creates tables for documents, versions, users, and audit logs.\nGiven a document insert operation, When it includes metadata and tags, Then the data is persisted correctly.",
+                    "leanValue": "essential",
+                    "cynefinDomain": "complicated",
+                    "tocConstraintRef": "Database design bottleneck",
+                    "sixSigmaMetric": "Zero data loss during version updates and 100% metadata consistency.",
+                    "hasUi": false,
+                    "requirementRefs": [
+                        "R1",
+                        "R2",
+                        "R3",
+                        "R4"
+                    ]
+                },
+                {
+                    "title": "Shared API Contract Definition",
+                    "roleTag": "BARCAN-TAG-12",
+                    "jtbd": "When implementing the API for this epic, I want to define the OpenAPI specification for search, document management, and analytics, so that backend and frontend can be built in parallel.",
+                    "acceptanceCriteria": "Given the OpenAPI yaml file, When validated by a swagger linter, Then it passes without errors.\nGiven a frontend developer, When reading the spec, Then they can mock the search and upload endpoints.",
+                    "leanValue": "essential",
+                    "cynefinDomain": "clear",
+                    "tocConstraintRef": "Frontend-backend integration block",
+                    "sixSigmaMetric": "100% API contract coverage for core document operations.",
+                    "hasUi": false,
+                    "requirementRefs": [
+                        "R1",
+                        "R2",
+                        "R3",
+                        "R4"
+                    ]
+                },
+                {
+                    "title": "Document Search and Content Backend",
+                    "roleTag": "BARCAN-TAG-02",
+                    "jtbd": "When implementing core backend for this epic, I want to build the full-text search engine, file processing, and versioning logic, so that the knowledge base functions within the < 2s SLA.",
+                    "acceptanceCriteria": "Given an uploaded document, When it is processed, Then it is indexed for full-text search and a new version is created.\nGiven a search query with synonyms, When executed, Then the API returns relevant results in under 2 seconds.",
+                    "leanValue": "essential",
+                    "cynefinDomain": "complicated",
+                    "tocConstraintRef": "Backend processing bottleneck",
+                    "sixSigmaMetric": "Search response time < 2 seconds for 99th percentile.",
+                    "hasUi": false,
+                    "requirementRefs": [
+                        "R1",
+                        "R2",
+                        "R4"
+                    ]
+                },
+                {
+                    "title": "Security and Authorization Backend",
+                    "roleTag": "BARCAN-TAG-07",
+                    "jtbd": "When implementing access control for this epic, I want to enforce role-based access and action logging, so that unauthorized downloads and edits are prevented.",
+                    "acceptanceCriteria": "Given a student user, When they attempt to delete a document, Then the backend returns a 403 Forbidden error.\nGiven any user action, When it modifies data, Then an audit log entry is securely recorded.",
+                    "leanValue": "essential",
+                    "cynefinDomain": "complicated",
+                    "tocConstraintRef": "Security vulnerability bottleneck",
+                    "sixSigmaMetric": "Zero unauthorized access incidents during automated testing.",
+                    "hasUi": false,
+                    "requirementRefs": [
+                        "R3"
+                    ]
+                },
+                {
+                    "title": "Document Management and Search UI",
+                    "roleTag": "BARCAN-TAG-11",
+                    "jtbd": "When implementing the UI for this epic, I want to build a responsive web application for searching, viewing, and exporting documents, so that users can interact with the knowledge base effectively.",
+                    "acceptanceCriteria": "Given the web application is loaded on a mobile device, When viewed, Then the layout adapts responsively without horizontal scrolling.\nGiven a user interacts with the search bar, When typing, Then auto-suggestions appear smoothly.",
+                    "leanValue": "essential",
+                    "cynefinDomain": "complicated",
+                    "tocConstraintRef": "User interaction bottleneck",
+                    "sixSigmaMetric": "Task completion rate for document retrieval > 95%.",
+                    "hasUi": true,
+                    "requirementRefs": [
+                        "R1",
+                        "R2",
+                        "R4",
+                        "R5"
+                    ]
+                }
+            ]
+        },
+        {
+            "existingEpicId": null,
+            "title": "External System Integrations",
+            "jtbd": "When changes happen in the educational process, I want the knowledge base to automatically sync with LMS and send notifications via messengers, so that users are immediately informed about updates.",
+            "kanoClass": "Performance",
+            "cynefinDomain": "complicated",
+            "sixSigmaMetric": "Reduce manual synchronization time to zero and ensure 100% notification delivery for document updates.",
+            "tocConstraintRef": "Inter-system communication bottleneck.",
+            "sourceIndex": 0,
+            "requirements": [
+                "R1: Indexing and searching materials from SDO.crie.ru and Teachbase via metadata integration.",
+                "R2: Synchronization of user roles and authorization with EIOS.",
+                "R3: Messenger notifications (Telegram, Max) and offline mode capability.",
+                "R4: Analytical reporting export to EIOS."
+            ],
+            "coverageComplete": true,
+            "slices": [
+                {
+                    "title": "Integration Data Schema",
+                    "roleTag": "BARCAN-TAG-08",
+                    "jtbd": "When implementing integrations for this epic, I want to define schemas for external metadata, synced roles, and notification subscriptions, so that external data is reliably cached.",
+                    "acceptanceCriteria": "Given the integration database schema, When executed, Then it creates tables for LMS metadata and messenger subscriptions.\nGiven a synced role record, When saved, Then it correctly maps to internal EIOS identifiers.",
+                    "leanValue": "essential",
+                    "cynefinDomain": "clear",
+                    "tocConstraintRef": "External data mapping bottleneck",
+                    "sixSigmaMetric": "Zero data schema conflicts during sync.",
+                    "hasUi": false,
+                    "requirementRefs": [
+                        "R1",
+                        "R2",
+                        "R3",
+                        "R4"
+                    ]
+                },
+                {
+                    "title": "Integration API Contract",
+                    "roleTag": "BARCAN-TAG-12",
+                    "jtbd": "When implementing external sync for this epic, I want to define the shared integration endpoints for LMS metadata and role synchronization, so that EIOS and LMS teams can integrate.",
+                    "acceptanceCriteria": "Given the integration OpenAPI spec, When validated, Then it defines webhooks for LMS updates and EIOS sync.\nGiven external teams, When they review the spec, Then they understand the required request formats.",
+                    "leanValue": "essential",
+                    "cynefinDomain": "clear",
+                    "tocConstraintRef": "Third-party integration API block",
+                    "sixSigmaMetric": "100% specification coverage for external data ingestion.",
+                    "hasUi": false,
+                    "requirementRefs": [
+                        "R1",
+                        "R2",
+                        "R4"
+                    ]
+                },
+                {
+                    "title": "EIOS and LMS Synchronization Backend",
+                    "roleTag": "BARCAN-TAG-02",
+                    "jtbd": "When implementing syncing for this epic, I want to build backend jobs to fetch LMS metadata and sync EIOS roles, so that users have a unified access experience across systems.",
+                    "acceptanceCriteria": "Given an updated document in LMS, When the sync job runs, Then the new metadata is indexed in the local database.\nGiven a role change in EIOS, When synced, Then the local user permissions are updated accordingly.",
+                    "leanValue": "essential",
+                    "cynefinDomain": "complicated",
+                    "tocConstraintRef": "Identity sync bottleneck",
+                    "sixSigmaMetric": "Role sync delay < 1 minute.",
+                    "hasUi": false,
+                    "requirementRefs": [
+                        "R1",
+                        "R2",
+                        "R4"
+                    ]
+                },
+                {
+                    "title": "Messenger Notification Bots",
+                    "roleTag": "BARCAN-TAG-02",
+                    "jtbd": "When implementing notifications for this epic, I want to build Telegram and Max bots to broadcast document update events, so that users are instantly notified.",
+                    "acceptanceCriteria": "Given a document is updated, When it belongs to a subscribed category, Then a message is sent to the Telegram bot.\nGiven the Max messenger integration, When an event triggers, Then the delivery confirmation is logged.",
+                    "leanValue": "essential",
+                    "cynefinDomain": "complicated",
+                    "tocConstraintRef": "Notification dispatch bottleneck",
+                    "sixSigmaMetric": "Notification delivery success rate > 99.9%.",
+                    "hasUi": false,
+                    "requirementRefs": [
+                        "R3"
+                    ]
+                },
+                {
+                    "title": "Integrations Management UI",
+                    "roleTag": "BARCAN-TAG-11",
+                    "jtbd": "When implementing integration UI for this epic, I want to build admin interfaces to manage LMS sync status and messenger subscriptions, so that administrators can resolve sync issues.",
+                    "acceptanceCriteria": "Given an admin logs in, When they navigate to the integrations page, Then they can view the last sync timestamps for LMS and EIOS.\nGiven a failed sync, When viewed in the UI, Then clear error messages and a retry button are displayed.",
+                    "leanValue": "essential",
+                    "cynefinDomain": "clear",
+                    "tocConstraintRef": "Sync visibility bottleneck",
+                    "sixSigmaMetric": "100% of sync failures are visible in the admin dashboard.",
+                    "hasUi": true,
+                    "requirementRefs": [
+                        "R1",
+                        "R2",
+                        "R3"
+                    ]
+                }
+            ]
+        },
+        {
+            "existingEpicId": null,
+            "title": "Financial and HR Block Configuration",
+            "jtbd": "When managing educational economics, I want to plan budgets, calculate workloads and scholarships, and generate reports within Moodle, so that financial and HR operations are transparent and centralized.",
+            "kanoClass": "Attractive",
+            "cynefinDomain": "complicated",
+            "sixSigmaMetric": "Reduce manual workload calculation time by 80% and eliminate calculation errors in scholarships.",
+            "tocConstraintRef": "Financial reporting and calculation bottleneck.",
+            "sourceIndex": 0,
+            "requirements": [
+                "R1: Storage and categorization of budget planning and teacher workload documents.",
+                "R2: Structuring of scholarship calculations and management reporting templates.",
+                "R3: Strict access control for economists and management versus teachers and students.",
+                "R4: Implementation using Moodle primitives (Files, Pages, Books, Glossaries) with specific metadata tags."
+            ],
+            "coverageComplete": true,
+            "slices": [
+                {
+                    "title": "Financial Block Moodle Architecture Spike",
+                    "roleTag": "BARCAN-TAG-09",
+                    "jtbd": "When implementing the financial block for this epic, I want to document how Moodle native resources will map to the required financial document hierarchy and permissions, so that the configuration is repeatable.",
+                    "acceptanceCriteria": "Given the Moodle architecture spike document, When reviewed, Then it details the use of Files, Pages, and Books for budgets and workloads.\nGiven the document, When approved, Then it serves as the definitive guide for Moodle configuration scripts.",
+                    "leanValue": "essential",
+                    "cynefinDomain": "complicated",
+                    "tocConstraintRef": "Moodle configuration strategy bottleneck",
+                    "sixSigmaMetric": "100% mapping of financial requirements to Moodle primitives.",
+                    "hasUi": false,
+                    "requirementRefs": [
+                        "R1",
+                        "R2",
+                        "R3",
+                        "R4"
+                    ]
+                },
+                {
+                    "title": "Financial Taxonomy and Metadata Schema",
+                    "roleTag": "BARCAN-TAG-08",
+                    "jtbd": "When implementing the financial block for this epic, I want to define the specific tags, categories, and glossary terms for budgets and workloads, so that documents are correctly indexed in Moodle.",
+                    "acceptanceCriteria": "Given the taxonomy definition file, When executed in Moodle, Then the correct financial categories and tags are created.\nGiven a glossary definition, When applied, Then terms like 'budget' and 'workload' are available system-wide.",
+                    "leanValue": "essential",
+                    "cynefinDomain": "clear",
+                    "tocConstraintRef": "Taxonomy mapping bottleneck",
+                    "sixSigmaMetric": "Zero missing metadata tags across financial document types.",
+                    "hasUi": false,
+                    "requirementRefs": [
+                        "R1",
+                        "R2"
+                    ]
+                },
+                {
+                    "title": "Financial Access Control Policies",
+                    "roleTag": "BARCAN-TAG-07",
+                    "jtbd": "When implementing financial security for this epic, I want to configure the exact roles and visibility boundaries for economists versus students, so that financial data does not leak.",
+                    "acceptanceCriteria": "Given a student user in Moodle, When they attempt to access budget documents, Then access is explicitly denied.\nGiven an economist role, When configured, Then it grants read and write access to all financial block categories.",
+                    "leanValue": "essential",
+                    "cynefinDomain": "complicated",
+                    "tocConstraintRef": "Financial data leak bottleneck",
+                    "sixSigmaMetric": "Zero unauthorized views of budget documents.",
+                    "hasUi": false,
+                    "requirementRefs": [
+                        "R3"
+                    ]
+                },
+                {
+                    "title": "Moodle Dashboard Configuration Scripts",
+                    "roleTag": "BARCAN-TAG-11",
+                    "jtbd": "When implementing the Moodle UI for this epic, I want to write configuration scripts that generate the required Pages, Books, and categories for the financial block, so that the structure is automated.",
+                    "acceptanceCriteria": "Given the Moodle configuration script, When executed, Then it automatically scaffolds the UI dashboard for financial reporting.\nGiven a teacher views the workload page, When it renders, Then it displays the correct templates and guidelines.",
+                    "leanValue": "essential",
+                    "cynefinDomain": "clear",
+                    "tocConstraintRef": "Manual configuration bottleneck",
+                    "sixSigmaMetric": "100% automated creation of the financial UI structure.",
+                    "hasUi": true,
+                    "requirementRefs": [
+                        "R1",
+                        "R2",
+                        "R4"
+                    ]
+                }
+            ]
+        }
+    ]
+}
