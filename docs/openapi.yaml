@@ -12,9 +12,15 @@ info:
     - TEACHER
     - LEARNER
   version: 1.0.0
+  license:
+    name: Proprietary
+    url: "https://example.com/license"
 servers:
   - url: /api/v1/integration
     description: Default integration base URL
+
+security:
+  - bearerAuth: []
 
 paths:
   /lms-metadata:
@@ -179,10 +185,175 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+
+  /documents:
+    get:
+      summary: Search documents
+      description: Search documents with full-text search and filters.
+      operationId: searchDocuments
+      parameters:
+        - name: query
+          in: query
+          description: Full-text search query
+          required: false
+          schema:
+            type: string
+        - name: documentType
+          in: query
+          description: Filter by document type
+          required: false
+          schema:
+            type: string
+        - name: specialty
+          in: query
+          description: Filter by specialty
+          required: false
+          schema:
+            type: string
+        - name: educationLevel
+          in: query
+          description: Filter by education level
+          required: false
+          schema:
+            type: string
+        - name: updatedAfter
+          in: query
+          description: Filter by updated after date
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Successful search results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Upload a new document
+      description: Upload a new document with its metadata and file.
+      operationId: uploadDocument
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentUpload'
+      responses:
+        '201':
+          description: Document successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /documents/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    get:
+      summary: Get a document by ID
+      operationId: getDocumentById
+      responses:
+        '200':
+          description: Document details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Document not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      summary: Update a document
+      operationId: updateDocument
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DocumentUpdate'
+      responses:
+        '200':
+          description: Document successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Document not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      summary: Delete a document
+      operationId: deleteDocument
+      responses:
+        '204':
+          description: Document successfully deleted
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '404':
+          description: Document not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /analytics/statistics:
+    get:
+      summary: Retrieve analytics statistics
+      description: Returns analytics data including popular searches, views, and downloads.
+      operationId: getAnalyticsStatistics
+      responses:
+        '200':
+          description: Successful retrieval of analytics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsStatistics'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 webhooks:
   lms_updates:
     post:
       summary: Webhook for incoming LMS metadata/resource updates
+      operationId: processLmsWebhook
       description: Invoked by LMS (Moodle) when courses, books, pages, or files are updated.
       requestBody:
         required: true
@@ -200,6 +371,7 @@ webhooks:
   eios_sync:
     post:
       summary: Webhook for outgoing EIOS role sync trigger
+      operationId: processEiosWebhook
       description: Invoked by EIOS or sent to the LMS to synchronize role definitions and assignments.
       requestBody:
         required: true
@@ -216,6 +388,11 @@ webhooks:
           description: Unauthorized delivery
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     LmsMetadata:
       type: object
@@ -246,6 +423,132 @@ components:
           format: date-time
           description: Last modification timestamp
 
+
+    Document:
+      type: object
+      required:
+        - id
+        - title
+        - authorId
+        - versionNumber
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Internal database sequence ID
+        title:
+          type: string
+          description: Document title
+        category:
+          type: string
+          description: Document category
+        tags:
+          type: array
+          items:
+            type: string
+          description: Associated tags
+        authorId:
+          type: integer
+          format: int64
+          description: Author ID
+        versionNumber:
+          type: integer
+          description: Latest version number
+        fileType:
+          type: string
+          description: Type of the latest file version
+        filePath:
+          type: string
+          description: Path/URL to download the document
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DocumentUpload:
+      type: object
+      required:
+        - title
+        - file
+      properties:
+        title:
+          type: string
+          description: Document title
+        category:
+          type: string
+          description: Document category
+        tags:
+          type: array
+          items:
+            type: string
+          description: Array of tags
+        file:
+          type: string
+          format: binary
+          description: The document file payload
+
+    DocumentUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+        category:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        file:
+          type: string
+          format: binary
+          description: The new document file version
+
+    AnalyticsStatistics:
+      type: object
+      required:
+        - popularSearches
+        - topViewedDocuments
+        - topDownloadedDocuments
+      properties:
+        popularSearches:
+          type: array
+          items:
+            type: object
+            required:
+              - query
+              - count
+            properties:
+              query:
+                type: string
+              count:
+                type: integer
+        topViewedDocuments:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentStats'
+        topDownloadedDocuments:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocumentStats'
+
+    DocumentStats:
+      type: object
+      required:
+        - documentId
+        - title
+        - count
+      properties:
+        documentId:
+          type: integer
+          format: int64
+        title:
+          type: string
+        count:
+          type: integer
     LmsMetadataUpsert:
       type: object
       required:
