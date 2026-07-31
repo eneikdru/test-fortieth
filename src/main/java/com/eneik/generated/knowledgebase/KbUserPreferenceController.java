@@ -1,5 +1,6 @@
 package com.eneik.generated.knowledgebase;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +20,12 @@ public class KbUserPreferenceController {
     private final KbUserFavoriteRepository userFavoriteRepository;
     private final KbSavedQueryRepository savedQueryRepository;
 
+    @Autowired
+    private JwtService jwtService;
+
+    @Autowired(required = false)
+    private jakarta.servlet.http.HttpServletRequest request;
+
     public KbUserPreferenceController(KbUserRepository userRepository,
                                       KbDocumentRepository documentRepository,
                                       KbUserFavoriteRepository userFavoriteRepository,
@@ -30,12 +37,37 @@ public class KbUserPreferenceController {
     }
 
     private KbUser resolveUser(String usernameHeader, String roleHeader) {
-        String username = (usernameHeader != null && !usernameHeader.trim().isEmpty()) ? usernameHeader.trim() : "system_user";
-        String role = (roleHeader != null && !roleHeader.trim().isEmpty()) ? roleHeader.trim() : "ADMINISTRATOR";
+        String username = null;
+        String role = null;
 
-        return userRepository.findByUsername(username)
+        if (request != null) {
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                JwtService.Claims claims = jwtService.parseToken(token);
+                if (claims == null) {
+                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired JWT token");
+                }
+                username = claims.getUsername();
+                role = claims.getRole();
+            }
+        }
+
+        if (username == null) {
+            username = (usernameHeader != null && !usernameHeader.trim().isEmpty()) ? usernameHeader.trim() : "system_user";
+        }
+        if (role == null) {
+            role = (roleHeader != null && !roleHeader.trim().isEmpty()) ? roleHeader.trim() : "ADMINISTRATOR";
+        }
+
+        final String finalUsername = username;
+        final String finalRole = role;
+        return userRepository.findByUsername(finalUsername)
             .map(user -> {
-                if (roleHeader != null && !roleHeader.trim().isEmpty() && !user.getRole().equalsIgnoreCase(roleHeader.trim())) {
+                String authHeader = request != null ? request.getHeader("Authorization") : null;
+                boolean isJwtUsed = authHeader != null && authHeader.startsWith("Bearer ");
+
+                if (!isJwtUsed && roleHeader != null && !roleHeader.trim().isEmpty() && !user.getRole().equalsIgnoreCase(roleHeader.trim())) {
                     user.setRole(roleHeader.trim().toUpperCase());
                     return userRepository.save(user);
                 }
@@ -43,8 +75,8 @@ public class KbUserPreferenceController {
             })
             .orElseGet(() -> {
                 KbUser user = new KbUser();
-                user.setUsername(username);
-                user.setRole(role.toUpperCase());
+                user.setUsername(finalUsername);
+                user.setRole(finalRole.toUpperCase());
                 return userRepository.save(user);
             });
     }
@@ -168,6 +200,31 @@ public class KbUserPreferenceController {
                 .collect(Collectors.toList());
     }
 
+    @GetMapping("/profile")
+    public UserProfileResponse getUserProfile(
+            @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
+
+        KbUser user = resolveUser(usernameHeader, roleHeader);
+        List<KbSavedQuery> queries = savedQueryRepository.findByUserId(user.getId());
+        List<SavedQueryResponse> queryResponses = queries.stream()
+                .map(this::mapToQueryResponse)
+                .collect(Collectors.toList());
+
+        List<KbUserFavorite> favorites = userFavoriteRepository.findByUserId(user.getId());
+        List<FavoriteDocumentResponse> favoriteResponses = favorites.stream()
+                .map(this::mapToFavoriteResponse)
+                .collect(Collectors.toList());
+
+        UserProfileResponse resp = new UserProfileResponse();
+        resp.setId(user.getId());
+        resp.setUsername(user.getUsername());
+        resp.setRole(user.getRole());
+        resp.setFavorites(favoriteResponses);
+        resp.setSavedQueries(queryResponses);
+        return resp;
+    }
+
     private FavoriteDocumentResponse mapToFavoriteResponse(KbUserFavorite fav) {
         KbDocument doc = fav.getDocument();
         KbDocumentVersion latest = doc.getVersions() != null ? doc.getVersions().stream()
@@ -260,5 +317,28 @@ public class KbUserPreferenceController {
 
         public String getCreatedAt() { return createdAt; }
         public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+    }
+
+    public static class UserProfileResponse {
+        private Long id;
+        private String username;
+        private String role;
+        private List<FavoriteDocumentResponse> favorites;
+        private List<SavedQueryResponse> savedQueries;
+
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+
+        public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
+
+        public String getRole() { return role; }
+        public void setRole(String role) { this.role = role; }
+
+        public List<FavoriteDocumentResponse> getFavorites() { return favorites; }
+        public void setFavorites(List<FavoriteDocumentResponse> favorites) { this.favorites = favorites; }
+
+        public List<SavedQueryResponse> getSavedQueries() { return savedQueries; }
+        public void setSavedQueries(List<SavedQueryResponse> savedQueries) { this.savedQueries = savedQueries; }
     }
 }

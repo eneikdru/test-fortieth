@@ -230,4 +230,88 @@ public class KbUserPreferencesIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
     }
+
+    @Test
+    public void testUserProfileEndpointWithHeadersAndIsolation() throws Exception {
+        // 1. Create a favorite document for user_profile_1
+        mockMvc.perform(post("/api/v1/integration/preferences/favorites")
+                        .param("documentId", documentId1.toString())
+                        .header("X-User-Name", "user_profile_1")
+                        .header("X-User-Role", "STUDENT"))
+                .andExpect(status().isCreated());
+
+        // 2. Save a query for user_profile_1
+        mockMvc.perform(post("/api/v1/integration/preferences/saved-queries")
+                        .param("query", "pediatric immunology")
+                        .header("X-User-Name", "user_profile_1")
+                        .header("X-User-Role", "STUDENT"))
+                .andExpect(status().isCreated());
+
+        // 3. Fetch user_profile_1's profile using headers and verify details
+        mockMvc.perform(get("/api/v1/integration/preferences/profile")
+                        .header("X-User-Name", "user_profile_1")
+                        .header("X-User-Role", "STUDENT"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username", is("user_profile_1")))
+                .andExpect(jsonPath("$.role", is("STUDENT")))
+                .andExpect(jsonPath("$.favorites", hasSize(1)))
+                .andExpect(jsonPath("$.favorites[0].documentId", is(documentId1.intValue())))
+                .andExpect(jsonPath("$.favorites[0].title", is("Pediatrics Guidelines")))
+                .andExpect(jsonPath("$.savedQueries", hasSize(1)))
+                .andExpect(jsonPath("$.savedQueries[0].queryText", is("pediatric immunology")));
+
+        // 4. Fetch user_profile_2's profile and check isolation (should be empty/no favorites or queries)
+        mockMvc.perform(get("/api/v1/integration/preferences/profile")
+                        .header("X-User-Name", "user_profile_2")
+                        .header("X-User-Role", "STUDENT"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username", is("user_profile_2")))
+                .andExpect(jsonPath("$.role", is("STUDENT")))
+                .andExpect(jsonPath("$.favorites", hasSize(0)))
+                .andExpect(jsonPath("$.savedQueries", hasSize(0)));
+    }
+
+    @Test
+    public void testUserProfileEndpointWithJwtAuthentication() throws Exception {
+        // 1. Log in to get standard Student JWT token
+        String responseStr = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"jwt_user\",\"password\":\"password\",\"role\":\"ORDINATOR\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String token = responseStr.split("\"token\":\"")[1].split("\"")[0];
+
+        // 2. Add a favorite using JWT
+        mockMvc.perform(post("/api/v1/integration/preferences/favorites")
+                        .param("documentId", documentId2.toString())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.documentId", is(documentId2.intValue())));
+
+        // 3. Save a query using JWT
+        mockMvc.perform(post("/api/v1/integration/preferences/saved-queries")
+                        .param("query", "cardiology valve repair")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isCreated());
+
+        // 4. Fetch profile using JWT and verify it returned correctly
+        mockMvc.perform(get("/api/v1/integration/preferences/profile")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username", is("jwt_user")))
+                .andExpect(jsonPath("$.role", is("ORDINATOR")))
+                .andExpect(jsonPath("$.favorites", hasSize(1)))
+                .andExpect(jsonPath("$.favorites[0].documentId", is(documentId2.intValue())))
+                .andExpect(jsonPath("$.favorites[0].title", is("Cardiology Guidelines")))
+                .andExpect(jsonPath("$.savedQueries", hasSize(1)))
+                .andExpect(jsonPath("$.savedQueries[0].queryText", is("cardiology valve repair")));
+    }
+
+    @Test
+    public void testUserProfileEndpointWithInvalidJwtReturns401() throws Exception {
+        mockMvc.perform(get("/api/v1/integration/preferences/profile")
+                        .header("Authorization", "Bearer invalid-jwt-token"))
+                .andExpect(status().isUnauthorized());
+    }
 }
