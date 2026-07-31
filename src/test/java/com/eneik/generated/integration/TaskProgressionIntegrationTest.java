@@ -34,6 +34,9 @@ public class TaskProgressionIntegrationTest {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private TaskTimeoutScheduler taskTimeoutScheduler;
+
     @BeforeEach
     public void setUp() {
         taskRepository.deleteAll();
@@ -196,5 +199,48 @@ public class TaskProgressionIntegrationTest {
         // Verify feature readiness in DB
         FeatureEntity updatedFeature = featureRepository.findById(feature.getId()).get();
         assertThat(updatedFeature.getReadinessRatio()).isEqualTo(1.0);
+    }
+
+    @Test
+    public void testScheduledCheckStuckTasksAreFailed() {
+        // Arrange
+        FeatureEntity feature = new FeatureEntity();
+        feature.setTitle("Stuck Feature");
+        feature.setReadinessRatio(0.5); // say it was 0.5 initially
+        featureRepository.save(feature);
+
+        // 1. Task stuck in PENDING_REVIEW for 13 hours (longer than 12 hours timeout)
+        Task stuckTask = new Task();
+        stuckTask.setTitle("Stuck Task");
+        stuckTask.setStatus(TaskStatus.PENDING_REVIEW);
+        stuckTask.setStatusChangedAt(java.time.LocalDateTime.now().minusHours(13));
+        stuckTask.setFeatureId(feature.getId());
+        taskRepository.save(stuckTask);
+
+        // 2. Task recently moved to PENDING_REVIEW (2 hours ago, less than 12 hours timeout)
+        Task recentTask = new Task();
+        recentTask.setTitle("Recent Task");
+        recentTask.setStatus(TaskStatus.PENDING_REVIEW);
+        recentTask.setStatusChangedAt(java.time.LocalDateTime.now().minusHours(2));
+        recentTask.setFeatureId(feature.getId());
+        taskRepository.save(recentTask);
+
+        // Act
+        taskTimeoutScheduler.checkPendingReviewTimeouts();
+
+        // Assert
+        // The stuck task should be FAILED
+        Task updatedStuckTask = taskRepository.findById(stuckTask.getId()).orElseThrow();
+        assertThat(updatedStuckTask.getStatus()).isEqualTo(TaskStatus.FAILED);
+
+        // The recent task should remain PENDING_REVIEW
+        Task updatedRecentTask = taskRepository.findById(recentTask.getId()).orElseThrow();
+        assertThat(updatedRecentTask.getStatus()).isEqualTo(TaskStatus.PENDING_REVIEW);
+
+        // Verify feature readiness is updated correctly
+        // Since one task has failed, the feature has 0 resolved tasks out of 2 total tasks.
+        // Therefore, readiness should be 0.0.
+        FeatureEntity updatedFeature = featureRepository.findById(feature.getId()).orElseThrow();
+        assertThat(updatedFeature.getReadinessRatio()).isEqualTo(0.0);
     }
 }
