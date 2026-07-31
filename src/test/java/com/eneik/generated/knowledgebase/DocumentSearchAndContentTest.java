@@ -192,4 +192,47 @@ public class DocumentSearchAndContentTest {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    public void testFuzzyMatchAndSpellCorrection() throws Exception {
+        // Upload a document with "Эпидемиология"
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "epidemiology.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Regulations on Epidemiology.".getBytes(StandardCharsets.UTF_8)
+        );
+
+        mockMvc.perform(multipart("/api/v1/integration/documents")
+                        .file(file)
+                        .param("title", "Методические рекомендации по Эпидемиологии")
+                        .param("category", "Нормативные акты")
+                        .param("tags", "ординатура")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated());
+
+        // 1. Search with a spelling error "Эпидемология" (Levenshtein distance 1)
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("query", "Эпидемология")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Методические рекомендации по Эпидемиологии"));
+
+        // 2. Search with spelling error "ординатра" (Levenshtein distance 1)
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("query", "ординатра")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Методические рекомендации по Эпидемиологии"));
+
+        // 3. Search with spelling error "рекомендаци" (Levenshtein distance 1)
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("query", "рекомендаци")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Методические рекомендации по Эпидемиологии"));
+    }
 }

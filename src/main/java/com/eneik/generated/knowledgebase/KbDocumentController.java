@@ -95,6 +95,76 @@ public class KbDocumentController {
         auditLogRepository.save(log);
     }
 
+    private static int getLevenshteinDistance(String s, String t) {
+        if (s == null || t == null) {
+            return Integer.MAX_VALUE;
+        }
+        int n = s.length();
+        int m = t.length();
+        if (n == 0) return m;
+        if (m == 0) return n;
+
+        int[] p = new int[n + 1];
+        int[] d = new int[n + 1];
+        int[] placeholder;
+
+        for (int i = 0; i <= n; i++) {
+            p[i] = i;
+        }
+
+        for (int j = 1; j <= m; j++) {
+            char t_j = t.charAt(j - 1);
+            d[0] = j;
+
+            for (int i = 1; i <= n; i++) {
+                int cost = (s.charAt(i - 1) == t_j) ? 0 : 1;
+                d[i] = Math.min(Math.min(d[i - 1] + 1, p[i] + 1), p[i - 1] + cost);
+            }
+
+            placeholder = p;
+            p = d;
+            d = placeholder;
+        }
+
+        return p[n];
+    }
+
+    private static boolean isFuzzyMatch(String w1, String w2) {
+        if (w1 == null || w2 == null) {
+            return false;
+        }
+        String clean1 = w1.trim().toLowerCase();
+        String clean2 = w2.trim().toLowerCase();
+        if (clean1.isEmpty() || clean2.isEmpty()) {
+            return false;
+        }
+        if (clean1.equals(clean2)) {
+            return true;
+        }
+        int len = Math.min(clean1.length(), clean2.length());
+        if (len < 3) {
+            return false;
+        }
+        int maxDist = (len <= 5) ? 1 : 2;
+        int dist = getLevenshteinDistance(clean1, clean2);
+        return dist <= maxDist;
+    }
+
+    private static boolean fieldMatchesFuzzily(String fieldValue, List<String> queryWords) {
+        if (fieldValue == null || queryWords == null || queryWords.isEmpty()) {
+            return false;
+        }
+        String[] fieldWords = fieldValue.toLowerCase().split("[\\s\\p{Punct}]+");
+        for (String qw : queryWords) {
+            for (String fw : fieldWords) {
+                if (isFuzzyMatch(qw, fw)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private List<String> expandSearchTerms(String query) {
         if (query == null || query.trim().isEmpty()) {
             return Collections.emptyList();
@@ -103,11 +173,20 @@ public class KbDocumentController {
         Set<String> terms = new LinkedHashSet<>();
         terms.add(normalizedQuery);
 
+        // Word-by-word splitting of the normalized query
+        String[] queryWords = normalizedQuery.split("[\\s\\p{Punct}]+");
+
         // If query contains or is contained in any synonym in a group, expand with that entire group
         for (Set<String> group : SYNONYM_GROUPS) {
             boolean groupMatched = false;
             for (String synonym : group) {
                 if (normalizedQuery.contains(synonym) || synonym.contains(normalizedQuery)) {
+                    groupMatched = true;
+                    break;
+                }
+
+                // Or if the whole query fuzzily matches the synonym
+                if (isFuzzyMatch(normalizedQuery, synonym)) {
                     groupMatched = true;
                     break;
                 }
@@ -118,12 +197,27 @@ public class KbDocumentController {
         }
 
         // Also add individual words and expand them
-        String[] parts = normalizedQuery.split("\\s+");
-        for (String part : parts) {
+        for (String part : queryWords) {
             if (part.length() > 2) {
                 terms.add(part);
                 for (Set<String> group : SYNONYM_GROUPS) {
-                    if (group.contains(part)) {
+                    boolean partMatched = false;
+                    for (String synonym : group) {
+                        if (synonym.contains(" ")) {
+                            // Multi-word synonym: only expand if the part matches the whole synonym exactly
+                            if (synonym.equals(part)) {
+                                partMatched = true;
+                                break;
+                            }
+                        } else {
+                            // Single-word synonym: expand if it fuzzily matches the query word
+                            if (isFuzzyMatch(part, synonym)) {
+                                partMatched = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (partMatched) {
                         terms.addAll(group);
                     }
                 }
@@ -216,6 +310,27 @@ public class KbDocumentController {
                         if (tagMatchesTerm) {
                             queryMatches = true;
                             break;
+                        }
+                    }
+
+                    if (!queryMatches) {
+                        // Fallback to word-by-word fuzzy matching if no exact match was found
+                        List<String> queryWordsList = new ArrayList<>();
+                        for (String term : expandedTerms) {
+                            queryWordsList.addAll(Arrays.asList(term.split("[\\s\\p{Punct}]+")));
+                        }
+
+                        if (fieldMatchesFuzzily(titleLower, queryWordsList)
+                                || fieldMatchesFuzzily(catLower, queryWordsList)
+                                || fieldMatchesFuzzily(contentLower, queryWordsList)) {
+                            queryMatches = true;
+                        } else {
+                            for (String tag : doc.getTags()) {
+                                if (fieldMatchesFuzzily(tag, queryWordsList)) {
+                                    queryMatches = true;
+                                    break;
+                                }
+                            }
                         }
                     }
 
