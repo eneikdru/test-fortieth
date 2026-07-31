@@ -325,4 +325,32 @@ public class DocumentSearchAndContentTest {
                 .andExpect(jsonPath("$[0].title").value("Standard Doc 3"))
                 .andExpect(jsonPath("$[2].title").value("Standard Doc 5"));
     }
+
+    @Test
+    public void testSearchWithTypoAndSynonymExpansion() throws Exception {
+        // Upload a document with "ФГОС" in the title
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "fgos_test.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Regulations for ФГОС.".getBytes(StandardCharsets.UTF_8)
+        );
+
+        mockMvc.perform(multipart("/api/v1/integration/documents")
+                        .file(file)
+                        .param("title", "Регламент ФГОС")
+                        .param("category", "Акты")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated());
+
+        // Search with typo: "образавательный стандарт" ('образавательный' has a typo, should be 'образовательный')
+        // "образовательный стандарт" is in synonym group with "фгос"
+        // Corrected intent should be "образовательный стандарт" which expands to "ФГОС", returning the "Регламент ФГОС" doc.
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("query", "образавательный стандарт")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Регламент ФГОС"));
+    }
 }

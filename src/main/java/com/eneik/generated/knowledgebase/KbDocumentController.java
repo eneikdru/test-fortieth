@@ -208,6 +208,84 @@ public class KbDocumentController {
         return getLevenshteinDistance(s1, s2) <= maxDist;
     }
 
+    private String correctQueryIntent(String query, List<KbDocument> docs) {
+        if (query == null || query.trim().isEmpty()) {
+            return query;
+        }
+
+        // 1. Build vocabulary of correct words from synonyms and all documents
+        Set<String> vocabulary = new HashSet<>();
+        for (Set<String> group : SYNONYM_GROUPS) {
+            for (String syn : group) {
+                vocabulary.addAll(getWords(syn));
+            }
+        }
+        if (docs != null) {
+            for (KbDocument doc : docs) {
+                vocabulary.addAll(getWords(doc.getTitle()));
+                if (doc.getCategory() != null) {
+                    vocabulary.addAll(getWords(doc.getCategory()));
+                }
+                if (doc.getTags() != null) {
+                    for (String tag : doc.getTags()) {
+                        vocabulary.addAll(getWords(tag));
+                    }
+                }
+                if (doc.getVersions() != null) {
+                    for (KbDocumentVersion ver : doc.getVersions()) {
+                        if (ver.getIndexedContent() != null) {
+                            vocabulary.addAll(getWords(ver.getIndexedContent()));
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. Tokenize the query and try to correct words
+        String[] words = query.trim().split("\\s+");
+        List<String> correctedWords = new ArrayList<>();
+
+        for (String word : words) {
+            String wordLower = word.toLowerCase().replaceAll("[^a-zA-Z0-9а-яА-ЯёЁ]", "");
+            if (wordLower.isEmpty() || wordLower.length() <= 2) {
+                correctedWords.add(word);
+                continue;
+            }
+
+            // If the word is already directly in the vocabulary, keep it
+            if (vocabulary.contains(wordLower)) {
+                correctedWords.add(word);
+                continue;
+            }
+
+            // Find the best fuzzy match in the vocabulary
+            String bestMatch = null;
+            int minDistance = Integer.MAX_VALUE;
+
+            for (String vWord : vocabulary) {
+                if (isFuzzyMatch(wordLower, vWord)) {
+                    int dist = getLevenshteinDistance(wordLower, vWord);
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        bestMatch = vWord;
+                    } else if (dist == minDistance) {
+                        if (bestMatch == null || Math.abs(vWord.length() - wordLower.length()) < Math.abs(bestMatch.length() - wordLower.length())) {
+                            bestMatch = vWord;
+                        }
+                    }
+                }
+            }
+
+            if (bestMatch != null) {
+                correctedWords.add(bestMatch);
+            } else {
+                correctedWords.add(word);
+            }
+        }
+
+        return String.join(" ", correctedWords);
+    }
+
     private Set<String> getWords(String text) {
         if (text == null || text.trim().isEmpty()) {
             return Collections.emptySet();
@@ -328,7 +406,8 @@ public class KbDocumentController {
             : Collections.emptySet();
 
         List<KbDocument> docs = documentRepository.findAll();
-        List<String> expandedTerms = expandSearchTerms(query);
+        String correctedQuery = correctQueryIntent(query, docs);
+        List<String> expandedTerms = expandSearchTerms(correctedQuery);
 
         List<DocumentResponse> results = docs.stream()
             .filter(doc -> {
