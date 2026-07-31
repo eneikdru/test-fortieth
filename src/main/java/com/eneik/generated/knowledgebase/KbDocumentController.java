@@ -117,6 +117,73 @@ public class KbDocumentController {
         return "STUDENT".equals(role) || "ORDINATOR".equals(role) || "RESIDENT".equals(role) || "POSTGRADUATE".equals(role) || "LISTENER".equals(role);
     }
 
+    private int getLevenshteinDistance(String s1, String s2) {
+        if (s1 == null || s2 == null) {
+            return Integer.MAX_VALUE;
+        }
+        int len1 = s1.length();
+        int len2 = s2.length();
+        int[][] dp = new int[len1 + 1][len2 + 1];
+
+        for (int i = 0; i <= len1; i++) {
+            dp[i][0] = i;
+        }
+        for (int j = 0; j <= len2; j++) {
+            dp[0][j] = j;
+        }
+
+        for (int i = 1; i <= len1; i++) {
+            for (int j = 1; j <= len2; j++) {
+                int cost = (s1.charAt(i - 1) == s2.charAt(j - 1)) ? 0 : 1;
+                dp[i][j] = Math.min(
+                    Math.min(dp[i - 1][j] + 1, dp[i][j - 1] + 1),
+                    dp[i - 1][j - 1] + cost
+                );
+            }
+        }
+        return dp[len1][len2];
+    }
+
+    private boolean isFuzzyMatch(String s1, String s2) {
+        if (s1 == null || s2 == null) {
+            return false;
+        }
+        s1 = s1.trim().toLowerCase();
+        s2 = s2.trim().toLowerCase();
+        if (s1.equals(s2)) {
+            return true;
+        }
+        int len1 = s1.length();
+        int len2 = s2.length();
+        if (Math.abs(len1 - len2) > 2) {
+            return false;
+        }
+        int minLen = Math.min(len1, len2);
+        int maxDist;
+        if (minLen < 4) {
+            maxDist = 0;
+        } else if (minLen < 8) {
+            maxDist = 1;
+        } else {
+            maxDist = 2;
+        }
+        return getLevenshteinDistance(s1, s2) <= maxDist;
+    }
+
+    private Set<String> getWords(String text) {
+        if (text == null || text.trim().isEmpty()) {
+            return Collections.emptySet();
+        }
+        String[] parts = text.toLowerCase().split("[^a-zA-Z0-9а-яА-ЯёЁ]+");
+        Set<String> words = new HashSet<>();
+        for (String p : parts) {
+            if (p.length() > 2) {
+                words.add(p);
+            }
+        }
+        return words;
+    }
+
     private void logAction(KbUser user, String action, String targetEntity, Long targetId, String details) {
         KbAuditLog log = new KbAuditLog();
         log.setUser(user);
@@ -143,6 +210,10 @@ public class KbDocumentController {
                     groupMatched = true;
                     break;
                 }
+                if (isFuzzyMatch(normalizedQuery, synonym)) {
+                    groupMatched = true;
+                    break;
+                }
             }
             if (groupMatched) {
                 terms.addAll(group);
@@ -150,12 +221,19 @@ public class KbDocumentController {
         }
 
         // Also add individual words and expand them
-        String[] parts = normalizedQuery.split("\\s+");
-        for (String part : parts) {
+        String[] queryWords = normalizedQuery.split("\\s+");
+        for (String part : queryWords) {
             if (part.length() > 2) {
                 terms.add(part);
                 for (Set<String> group : SYNONYM_GROUPS) {
-                    if (group.contains(part)) {
+                    boolean matched = false;
+                    for (String synonym : group) {
+                        if (synonym.equals(part) || isFuzzyMatch(part, synonym)) {
+                            matched = true;
+                            break;
+                        }
+                    }
+                    if (matched) {
                         terms.addAll(group);
                     }
                 }
@@ -248,6 +326,38 @@ public class KbDocumentController {
                         if (tagMatchesTerm) {
                             queryMatches = true;
                             break;
+                        }
+                    }
+
+                    // If not matched exactly, try fuzzy matching individual words
+                    if (!queryMatches) {
+                        Set<String> docWords = new HashSet<>();
+                        docWords.addAll(getWords(doc.getTitle()));
+                        if (doc.getCategory() != null) {
+                            docWords.addAll(getWords(doc.getCategory()));
+                        }
+                        if (latest.getIndexedContent() != null) {
+                            docWords.addAll(getWords(latest.getIndexedContent()));
+                        }
+                        for (String tag : doc.getTags()) {
+                            docWords.addAll(getWords(tag));
+                        }
+
+                        Set<String> queryWords = new HashSet<>();
+                        for (String term : expandedTerms) {
+                            queryWords.addAll(getWords(term));
+                        }
+
+                        for (String qWord : queryWords) {
+                            for (String dWord : docWords) {
+                                if (isFuzzyMatch(qWord, dWord)) {
+                                    queryMatches = true;
+                                    break;
+                                }
+                            }
+                            if (queryMatches) {
+                                break;
+                            }
                         }
                     }
 

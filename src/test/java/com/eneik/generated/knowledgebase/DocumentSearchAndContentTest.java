@@ -192,4 +192,53 @@ public class DocumentSearchAndContentTest {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    public void testSearchWithTypoTolerance() throws Exception {
+        // Upload a document with title containing "Эпидемиология"
+        MockMultipartFile file1 = new MockMultipartFile(
+                "file",
+                "epidem.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Regulations on scientific research in epidemiology.".getBytes(StandardCharsets.UTF_8)
+        );
+
+        mockMvc.perform(multipart("/api/v1/integration/documents")
+                        .file(file1)
+                        .param("title", "Введение в Эпидемиологию")
+                        .param("category", "Материалы")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated());
+
+        // Upload another document with title "Регламент аспирантуры"
+        MockMultipartFile file2 = new MockMultipartFile(
+                "file",
+                "reg.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Postgraduate student guidelines.".getBytes(StandardCharsets.UTF_8)
+        );
+
+        mockMvc.perform(multipart("/api/v1/integration/documents")
+                        .file(file2)
+                        .param("title", "Регламент аспирантуры")
+                        .param("category", "Инструкции")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated());
+
+        // Search with typo in "Эпидемиологию" -> "Эпидемология"
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("query", "Эпидемология")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Введение в Эпидемиологию"));
+
+        // Search with typo in "Регламент" -> "Регламет"
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("query", "Регламет")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Регламент аспирантуры"));
+    }
 }
