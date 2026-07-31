@@ -213,6 +213,144 @@ public class KbDocumentController {
         return getLevenshteinDistance(s1, s2) <= maxDist;
     }
 
+    private int calculateMatchScore(KbDocument doc, String query, String correctedQuery, List<String> expandedTerms) {
+        if (query == null || query.trim().isEmpty()) {
+            return 0;
+        }
+
+        int score = 0;
+        String queryLower = query.trim().toLowerCase();
+        String correctedQueryLower = (correctedQuery != null) ? correctedQuery.trim().toLowerCase() : queryLower;
+
+        String titleLower = doc.getTitle().toLowerCase();
+        String catLower = doc.getCategory() != null ? doc.getCategory().toLowerCase() : "";
+        KbDocumentVersion latest = doc.getVersions().stream()
+            .max(Comparator.comparing(KbDocumentVersion::getVersionNumber))
+            .orElse(null);
+        String contentLower = (latest != null && latest.getIndexedContent() != null) ? latest.getIndexedContent().toLowerCase() : "";
+
+        // 1. Exact query matches on the ORIGINAL query (Highest priority)
+        if (titleLower.contains(queryLower)) {
+            score += 10000;
+        }
+        if (catLower.contains(queryLower)) {
+            score += 5000;
+        }
+        if (doc.getTags().stream().anyMatch(t -> t.toLowerCase().contains(queryLower))) {
+            score += 5000;
+        }
+        if (contentLower.contains(queryLower)) {
+            score += 2000;
+        }
+
+        // 2. Individual word exact matches on ORIGINAL query
+        Set<String> origQueryWords = getWords(queryLower);
+        Set<String> titleWords = getWords(titleLower);
+        Set<String> catWords = getWords(catLower);
+        Set<String> tagWords = doc.getTags().stream()
+            .flatMap(t -> getWords(t).stream())
+            .collect(Collectors.toSet());
+        Set<String> contentWords = getWords(contentLower);
+
+        for (String qWord : origQueryWords) {
+            if (titleWords.contains(qWord)) {
+                score += 1000;
+            }
+            if (catWords.contains(qWord) || tagWords.contains(qWord)) {
+                score += 500;
+            }
+            if (contentWords.contains(qWord)) {
+                score += 200;
+            }
+        }
+
+        // 3. Exact matches on CORRECTED query (if different from original query)
+        if (!correctedQueryLower.equals(queryLower)) {
+            if (titleLower.contains(correctedQueryLower)) {
+                score += 5000;
+            }
+            if (catLower.contains(correctedQueryLower)) {
+                score += 2500;
+            }
+            if (doc.getTags().stream().anyMatch(t -> t.toLowerCase().contains(correctedQueryLower))) {
+                score += 2500;
+            }
+            if (contentLower.contains(correctedQueryLower)) {
+                score += 1000;
+            }
+
+            Set<String> correctedQueryWords = getWords(correctedQueryLower);
+            for (String qWord : correctedQueryWords) {
+                if (titleWords.contains(qWord)) {
+                    score += 500;
+                }
+                if (catWords.contains(qWord) || tagWords.contains(qWord)) {
+                    score += 250;
+                }
+                if (contentWords.contains(qWord)) {
+                    score += 100;
+                }
+            }
+        }
+
+        // 4. Expanded terms / synonyms matches
+        if (expandedTerms != null) {
+            for (String term : expandedTerms) {
+                String termLower = term.toLowerCase();
+                // Avoid double scoring original/corrected query terms
+                if (termLower.equals(queryLower) || termLower.equals(correctedQueryLower)) {
+                    continue;
+                }
+                if (titleLower.contains(termLower)) {
+                    score += 2000;
+                }
+                if (catLower.contains(termLower)) {
+                    score += 1000;
+                }
+                if (doc.getTags().stream().anyMatch(t -> t.toLowerCase().contains(termLower))) {
+                    score += 1000;
+                }
+                if (contentLower.contains(termLower)) {
+                    score += 500;
+                }
+            }
+        }
+
+        // 5. Fuzzy match scoring
+        Set<String> allDocWords = new HashSet<>();
+        allDocWords.addAll(titleWords);
+        allDocWords.addAll(catWords);
+        allDocWords.addAll(tagWords);
+        allDocWords.addAll(contentWords);
+
+        Set<String> allQueryTerms = new HashSet<>();
+        allQueryTerms.addAll(origQueryWords);
+        if (correctedQueryLower != null) {
+            allQueryTerms.addAll(getWords(correctedQueryLower));
+        }
+        if (expandedTerms != null) {
+            for (String term : expandedTerms) {
+                allQueryTerms.addAll(getWords(term));
+            }
+        }
+
+        for (String qWord : allQueryTerms) {
+            for (String dWord : allDocWords) {
+                if (isFuzzyMatch(qWord, dWord)) {
+                    if (titleWords.contains(dWord)) {
+                        score += 50;
+                    } else if (catWords.contains(dWord) || tagWords.contains(dWord)) {
+                        score += 25;
+                    } else {
+                        score += 10;
+                    }
+                }
+            }
+        }
+
+        return score;
+    }
+
     private String correctQueryIntent(String query, List<KbDocument> docs) {
         if (query == null || query.trim().isEmpty()) {
             return query;
@@ -414,6 +552,14 @@ public class KbDocumentController {
         String correctedQuery = correctQueryIntent(query, docs);
         List<String> expandedTerms = expandSearchTerms(correctedQuery);
 
+        final Map<Long, Integer> docScores = new HashMap<>();
+        if (query != null && !query.trim().isEmpty()) {
+            for (KbDocument doc : docs) {
+                int score = calculateMatchScore(doc, query, correctedQuery, expandedTerms);
+                docScores.put(doc.getId(), score);
+            }
+        }
+
         List<DocumentResponse> results = docs.stream()
             .filter(doc -> {
                 if (favoritesOnly != null && favoritesOnly) {
@@ -529,6 +675,17 @@ public class KbDocumentController {
             })
             .map(doc -> mapToResponse(doc, user))
             .collect(Collectors.toList());
+
+        if (query != null && !query.trim().isEmpty()) {
+            results.sort((r1, r2) -> {
+                int score1 = docScores.getOrDefault(r1.getId(), 0);
+                int score2 = docScores.getOrDefault(r2.getId(), 0);
+                if (score1 != score2) {
+                    return Integer.compare(score2, score1); // Descending score
+                }
+                return Long.compare(r1.getId(), r2.getId()); // Stable order
+            });
+        }
 
         // Resolve page/size or limit/offset
         int limitVal = 10; // Default limit/size
