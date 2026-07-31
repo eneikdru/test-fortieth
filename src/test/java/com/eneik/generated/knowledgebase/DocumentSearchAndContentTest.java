@@ -38,13 +38,28 @@ public class DocumentSearchAndContentTest {
     @Autowired
     private KbAuditLogRepository auditLogRepository;
 
+    private String adminToken;
+
+    private String getJwtToken(String username, String role) throws Exception {
+        String loginJson = "{\"username\":\"" + username + "\", \"password\":\"password\", \"role\":\"" + role + "\"}";
+        String loginResponse = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(loginJson))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return "Bearer " + loginResponse.split("\"token\":\"")[1].split("\"")[0];
+    }
+
     @BeforeEach
-    public void setup() {
+    public void setup() throws Exception {
         // Clear database in correct order of constraints
         auditLogRepository.deleteAll();
         versionRepository.deleteAll();
         documentRepository.deleteAll();
         userRepository.deleteAll();
+
+        // Get admin token
+        adminToken = getJwtToken("admin_user", "ADMINISTRATOR");
     }
 
     @Test
@@ -62,6 +77,7 @@ public class DocumentSearchAndContentTest {
                         .param("title", "Регламент ФГОС ЦНИИ")
                         .param("category", "Нормативные акты")
                         .param("tags", "ординатура", "ФГОС")
+                        .header("Authorization", adminToken)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id", notNullValue()))
@@ -88,6 +104,7 @@ public class DocumentSearchAndContentTest {
                         .param("title", "Инструкция ЦНИИ Эпидемиологии")
                         .param("category", "Методические материалы")
                         .param("tags", "исследования", "ординатура")
+                        .header("Authorization", adminToken)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.title").value("Инструкция ЦНИИ Эпидемиологии"))
@@ -97,6 +114,7 @@ public class DocumentSearchAndContentTest {
         // 3. Search with synonyms (Query: "федеральный государственный образовательный стандарт" should match "ФГОС" doc)
         mockMvc.perform(get("/api/v1/integration/documents")
                         .param("query", "федеральный государственный образовательный стандарт")
+                        .header("Authorization", adminToken)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
@@ -108,6 +126,7 @@ public class DocumentSearchAndContentTest {
         // - doc2 has "ЦНИИ Эпидемиологии" in title
         mockMvc.perform(get("/api/v1/integration/documents")
                         .param("query", "ФБУН")
+                        .header("Authorization", adminToken)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)));
@@ -115,6 +134,7 @@ public class DocumentSearchAndContentTest {
         // 5. Check specialty filter ("ординатура" matches both)
         mockMvc.perform(get("/api/v1/integration/documents")
                         .param("specialty", "ординатура")
+                        .header("Authorization", adminToken)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(2)));
@@ -122,6 +142,7 @@ public class DocumentSearchAndContentTest {
         // 6. Check specialty filter for "исследования" (matches only second doc)
         mockMvc.perform(get("/api/v1/integration/documents")
                         .param("specialty", "исследования")
+                        .header("Authorization", adminToken)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
@@ -130,6 +151,7 @@ public class DocumentSearchAndContentTest {
         // 7. Check documentType filter (pdf)
         mockMvc.perform(get("/api/v1/integration/documents")
                         .param("documentType", "pdf")
+                        .header("Authorization", adminToken)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
@@ -139,12 +161,14 @@ public class DocumentSearchAndContentTest {
         String futureIso = LocalDateTime.now().plusDays(1).format(DateTimeFormatter.ISO_DATE_TIME);
         mockMvc.perform(get("/api/v1/integration/documents")
                         .param("updatedAfter", futureIso)
+                        .header("Authorization", adminToken)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
 
         // 9. Get document details by ID and check VIEW audit log triggers
         mockMvc.perform(get("/api/v1/integration/documents/{id}", docId)
+                        .header("Authorization", adminToken)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.title").value("Регламент ФГОС ЦНИИ"));
@@ -161,6 +185,7 @@ public class DocumentSearchAndContentTest {
                         .file(updatedFile)
                         .param("title", "Регламент ФГОС ЦНИИ Обновленный")
                         .param("category", "Нормативные акты")
+                        .header("Authorization", adminToken)
                         .with(request -> { request.setMethod("PUT"); return request; })
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
@@ -169,7 +194,8 @@ public class DocumentSearchAndContentTest {
                 .andExpect(jsonPath("$.fileType").value("docx"));
 
         // 11. Verify file download
-        mockMvc.perform(get("/api/v1/integration/documents/download/{id}/version/2", docId))
+        mockMvc.perform(get("/api/v1/integration/documents/download/{id}/version/2", docId)
+                        .header("Authorization", adminToken))
                 .andExpect(status().isOk())
                 .andExpect(content().string("Updated standard regulations version two."));
 
@@ -184,11 +210,13 @@ public class DocumentSearchAndContentTest {
                 .andExpect(jsonPath("$.topDownloadedDocuments", hasSize(greaterThanOrEqualTo(1))));
 
         // 13. Delete document
-        mockMvc.perform(delete("/api/v1/integration/documents/{id}", docId))
+        mockMvc.perform(delete("/api/v1/integration/documents/{id}", docId)
+                        .header("Authorization", adminToken))
                 .andExpect(status().isNoContent());
 
         // Verify delete is 404 now
         mockMvc.perform(get("/api/v1/integration/documents/{id}", docId)
+                        .header("Authorization", adminToken)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound());
     }

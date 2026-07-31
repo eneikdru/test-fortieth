@@ -27,6 +27,7 @@ public class KbDocumentController {
     private final KbDocumentVersionRepository versionRepository;
     private final KbUserRepository userRepository;
     private final KbAuditLogRepository auditLogRepository;
+    private final JwtUtil jwtUtil;
 
     private static final String STORAGE_DIR = "data/storage";
 
@@ -40,11 +41,13 @@ public class KbDocumentController {
     public KbDocumentController(KbDocumentRepository documentRepository,
                                 KbDocumentVersionRepository versionRepository,
                                 KbUserRepository userRepository,
-                                KbAuditLogRepository auditLogRepository) {
+                                KbAuditLogRepository auditLogRepository,
+                                JwtUtil jwtUtil) {
         this.documentRepository = documentRepository;
         this.versionRepository = versionRepository;
         this.userRepository = userRepository;
         this.auditLogRepository = auditLogRepository;
+        this.jwtUtil = jwtUtil;
     }
 
     private KbUser getOrCreateSystemUser() {
@@ -57,14 +60,22 @@ public class KbDocumentController {
             });
     }
 
-    private KbUser resolveUser(String usernameHeader, String roleHeader) {
-        String username = (usernameHeader != null && !usernameHeader.trim().isEmpty()) ? usernameHeader.trim() : "system_user";
-        String role = (roleHeader != null && !roleHeader.trim().isEmpty()) ? roleHeader.trim() : "ADMINISTRATOR";
+    private KbUser resolveUser(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Missing or invalid Authorization header");
+        }
+        String token = authHeader.substring(7).trim();
+        JwtUtil.Claims claims = jwtUtil.parseToken(token);
+        if (claims == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid JWT token");
+        }
+        String username = claims.getUsername();
+        String role = claims.getRole();
 
         return userRepository.findByUsername(username)
             .map(user -> {
-                if (roleHeader != null && !roleHeader.trim().isEmpty() && !user.getRole().equalsIgnoreCase(roleHeader.trim())) {
-                    user.setRole(roleHeader.trim().toUpperCase());
+                if (!user.getRole().equalsIgnoreCase(role.trim())) {
+                    user.setRole(role.trim().toUpperCase());
                     return userRepository.save(user);
                 }
                 return user;
@@ -140,10 +151,11 @@ public class KbDocumentController {
             @RequestParam(required = false) String specialty,
             @RequestParam(required = false) String educationLevel,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime updatedAfter,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
             @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
 
-        KbUser user = resolveUser(usernameHeader, roleHeader);
+        KbUser user = resolveUser(authHeader);
         if (query != null && !query.trim().isEmpty()) {
             logAction(user, "SEARCH", "Search", null, query.trim());
         }
@@ -237,6 +249,7 @@ public class KbDocumentController {
             @RequestParam(value = "category", required = false) String category,
             @RequestParam(value = "tags", required = false) List<String> tags,
             @RequestParam("file") MultipartFile file,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
             @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
 
@@ -247,7 +260,7 @@ public class KbDocumentController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File is required");
         }
 
-        KbUser systemUser = resolveUser(usernameHeader, roleHeader);
+        KbUser systemUser = resolveUser(authHeader);
         if (isStudent(systemUser)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Students are not authorized to upload documents");
         }
@@ -308,12 +321,13 @@ public class KbDocumentController {
     @GetMapping("/{id}")
     public DocumentResponse getDocumentById(
             @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
             @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
         KbDocument doc = documentRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
 
-        KbUser systemUser = resolveUser(usernameHeader, roleHeader);
+        KbUser systemUser = resolveUser(authHeader);
         logAction(systemUser, "VIEW", "KbDocument", id, doc.getTitle());
 
         return mapToResponse(doc);
@@ -326,10 +340,11 @@ public class KbDocumentController {
             @RequestParam(value = "category", required = false) String category,
             @RequestParam(value = "tags", required = false) List<String> tags,
             @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
             @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
 
-        KbUser systemUser = resolveUser(usernameHeader, roleHeader);
+        KbUser systemUser = resolveUser(authHeader);
         if (isStudent(systemUser)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Students are not authorized to edit documents");
         }
@@ -399,9 +414,10 @@ public class KbDocumentController {
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteDocument(
             @PathVariable Long id,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
             @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
-        KbUser systemUser = resolveUser(usernameHeader, roleHeader);
+        KbUser systemUser = resolveUser(authHeader);
         if (isStudent(systemUser)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Students are not authorized to delete documents");
         }
@@ -418,6 +434,7 @@ public class KbDocumentController {
     public ResponseEntity<byte[]> downloadDocument(
             @PathVariable Long id,
             @PathVariable Integer versionNumber,
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
             @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
             @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
         KbDocument doc = documentRepository.findById(id)
@@ -428,7 +445,7 @@ public class KbDocumentController {
             .findFirst()
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Version not found"));
 
-        KbUser systemUser = resolveUser(usernameHeader, roleHeader);
+        KbUser systemUser = resolveUser(authHeader);
         logAction(systemUser, "DOWNLOAD", "KbDocument", id, doc.getTitle() + " (v" + versionNumber + ")");
 
         // Try to load actual file from storage
