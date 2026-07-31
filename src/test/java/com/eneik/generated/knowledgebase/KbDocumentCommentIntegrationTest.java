@@ -41,6 +41,9 @@ public class KbDocumentCommentIntegrationTest {
     @Autowired
     private KbDocumentCommentRepository commentRepository;
 
+    @Autowired
+    private jakarta.persistence.EntityManager entityManager;
+
     private Long sampleDocId;
 
     @BeforeEach
@@ -167,5 +170,38 @@ public class KbDocumentCommentIntegrationTest {
                         .header("X-User-Name", "reviewer_alice")
                         .header("X-User-Role", "ADMINISTRATOR"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    public void testDeleteDocumentCascadesCommentsDeletion() throws Exception {
+        // 1. Submit a valid comment for the sample document
+        String commentJson = "{"
+                + "\"content\": \"Temporary comment to check cascaded delete.\","
+                + "\"type\": \"COMMENT\""
+                + "}";
+
+        mockMvc.perform(post("/api/v1/integration/documents/{id}/comments", sampleDocId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(commentJson)
+                        .header("X-User-Name", "reviewer_alice")
+                        .header("X-User-Role", "ADMINISTRATOR"))
+                .andExpect(status().isCreated());
+
+        // Verify the comment is persisted in DB and associated with the document
+        List<KbDocumentComment> commentsBeforeDelete = commentRepository.findByDocumentIdOrderByCreatedAtAsc(sampleDocId);
+        assertEquals(1, commentsBeforeDelete.size(), "One comment should be persisted in DB for the document before deletion");
+
+        // 2. Delete the document
+        mockMvc.perform(delete("/api/v1/integration/documents/{id}", sampleDocId)
+                        .header("X-User-Name", "reviewer_alice")
+                        .header("X-User-Role", "ADMINISTRATOR"))
+                .andExpect(status().isNoContent());
+
+        entityManager.flush();
+        entityManager.clear();
+
+        // 3. Verify that the comments are deleted as well
+        List<KbDocumentComment> commentsAfterDelete = commentRepository.findByDocumentIdOrderByCreatedAtAsc(sampleDocId);
+        assertTrue(commentsAfterDelete.isEmpty(), "Comments should be cascaded deleted when the document is deleted");
     }
 }
