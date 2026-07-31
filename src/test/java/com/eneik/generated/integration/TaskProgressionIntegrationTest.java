@@ -32,6 +32,9 @@ public class TaskProgressionIntegrationTest {
     private FeatureRepository featureRepository;
 
     @Autowired
+    private TaskTimeoutScheduler taskTimeoutScheduler;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @BeforeEach
@@ -87,19 +90,19 @@ public class TaskProgressionIntegrationTest {
         assertThat(responseMap).containsKey("readiness");
 
         int resolvedCount = (int) responseMap.get("resolvedCount");
-        assertThat(resolvedCount).isEqualTo(9); // 8 READY + 1 PENDING_REVIEW task now resolved!
+        // Only the 8 READY tasks are resolved via API endpoint.
+        assertThat(resolvedCount).isEqualTo(8);
 
         // Verify task state transitions in DB
         List<Task> resolvedTasks = taskRepository.findByStatus(TaskStatus.RESOLVED);
-        assertThat(resolvedTasks).hasSize(9);
+        assertThat(resolvedTasks).hasSize(8);
 
         List<Task> pendingTasks = taskRepository.findByStatus(TaskStatus.PENDING_REVIEW);
-        assertThat(pendingTasks).isEmpty();
+        assertThat(pendingTasks).hasSize(1); // Still PENDING_REVIEW!
 
-        // Verify feature readiness in DB
+        // Verify feature readiness in DB: 8 resolved out of 10 tasks = 0.8
         FeatureEntity updatedFeature = featureRepository.findById(feature.getId()).get();
-        // 9 resolved out of 10 tasks = 0.9
-        assertThat(updatedFeature.getReadinessRatio()).isEqualTo(0.9);
+        assertThat(updatedFeature.getReadinessRatio()).isEqualTo(0.8);
     }
 
     @Test
@@ -196,5 +199,44 @@ public class TaskProgressionIntegrationTest {
         // Verify feature readiness in DB
         FeatureEntity updatedFeature = featureRepository.findById(feature.getId()).get();
         assertThat(updatedFeature.getReadinessRatio()).isEqualTo(1.0);
+    }
+
+    @Test
+    public void testScheduledTimeoutTransitionToFailed() {
+        // Arrange
+        FeatureEntity feature = new FeatureEntity();
+        feature.setTitle("Timeout Feature");
+        feature.setReadinessRatio(0.5);
+        featureRepository.save(feature);
+
+        // Task 1: Stuck in PENDING_REVIEW for 5 hours (should fail)
+        Task stuck = new Task();
+        stuck.setTitle("Stuck Review Task");
+        stuck.setStatus(TaskStatus.PENDING_REVIEW);
+        stuck.setStatusChangedAt(java.time.LocalDateTime.now().minusHours(5));
+        stuck.setFeatureId(feature.getId());
+        taskRepository.save(stuck);
+
+        // Task 2: Recently moved to PENDING_REVIEW (should remain PENDING_REVIEW)
+        Task recent = new Task();
+        recent.setTitle("Recent Review Task");
+        recent.setStatus(TaskStatus.PENDING_REVIEW);
+        recent.setStatusChangedAt(java.time.LocalDateTime.now());
+        recent.setFeatureId(feature.getId());
+        taskRepository.save(recent);
+
+        // Act
+        taskTimeoutScheduler.checkPendingReviewTimeouts();
+
+        // Assert
+        Task updatedStuck = taskRepository.findById(stuck.getId()).orElseThrow();
+        assertThat(updatedStuck.getStatus()).isEqualTo(TaskStatus.FAILED);
+
+        Task updatedRecent = taskRepository.findById(recent.getId()).orElseThrow();
+        assertThat(updatedRecent.getStatus()).isEqualTo(TaskStatus.PENDING_REVIEW);
+
+        // Verify feature readiness was correctly recalculated: 0 resolved / 2 total = 0.0
+        FeatureEntity updatedFeature = featureRepository.findById(feature.getId()).orElseThrow();
+        assertThat(updatedFeature.getReadinessRatio()).isEqualTo(0.0);
     }
 }
