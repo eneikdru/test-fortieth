@@ -353,4 +353,53 @@ public class DocumentSearchAndContentTest {
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].title").value("Регламент ФГОС"));
     }
+
+    @Test
+    public void testSearchExactPriorityOverFuzzy() throws Exception {
+        // 1. Upload Doc with correct name "Эпидемиология"
+        MockMultipartFile file1 = new MockMultipartFile(
+                "file",
+                "correct.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Correct epidemiology document.".getBytes(StandardCharsets.UTF_8)
+        );
+        mockMvc.perform(multipart("/api/v1/integration/documents")
+                        .file(file1)
+                        .param("title", "Основы Эпидемиологии")
+                        .param("category", "Учебники")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated());
+
+        // 2. Upload Doc with misspelled name "Эпидемология" literally
+        MockMultipartFile file2 = new MockMultipartFile(
+                "file",
+                "typo.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Misspelled document for testing.".getBytes(StandardCharsets.UTF_8)
+        );
+        mockMvc.perform(multipart("/api/v1/integration/documents")
+                        .file(file2)
+                        .param("title", "Основы Эпидемологии")
+                        .param("category", "Опечатки")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated());
+
+        // When we search for "Эпидемиологии" (correct spelling), exact match ("Основы Эпидемиологии") must be ranked first.
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("query", "Эпидемиологии")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].title").value("Основы Эпидемиологии"))
+                .andExpect(jsonPath("$[1].title").value("Основы Эпидемологии"));
+
+        // When we search for "Эпидемологии" (spelled with typo), literal match "Основы Эпидемологии" must be ranked first.
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("query", "Эпидемологии")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].title").value("Основы Эпидемологии"))
+                .andExpect(jsonPath("$[1].title").value("Основы Эпидемиологии"));
+    }
 }
