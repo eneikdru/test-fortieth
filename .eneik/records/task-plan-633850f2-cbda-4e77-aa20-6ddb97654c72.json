@@ -1,0 +1,34 @@
+{
+  "epics": [
+    {
+      "existingEpicId": "c0ebc3fb-e9c3-4809-84cd-e0b6d5007703",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "Reduce STAGNATION WARNING false positive duration from >3 visits to 0",
+      "tocConstraintRef": "Feature readiness recalculation pipeline",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: Patch existing task resolution logic to correctly update the project deliverable readiness ratio so that stagnation warnings are cleared upon progress"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Patch readiness ratio update in task resolution",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing the readiness fix for this epic, I want to patch the existing task resolution logic, so that the deliverable readiness ratio accurately reflects resolved tasks and clears the stagnation warning.",
+          "acceptanceCriteria": "Given a project experiencing a STAGNATION WARNING despite task resolution\nWhen a task transitions to resolved\nThen the system must correctly recalculate and persist the feature readiness ratio\nAnd clear the STAGNATION WARNING if progress is detected",
+          "leanValue": "essential",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "Task resolution status update bottleneck",
+          "sixSigmaMetric": "Reduce the occurrences of stalled readiness ratios after task resolution to 0",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    }
+  ]
+}
