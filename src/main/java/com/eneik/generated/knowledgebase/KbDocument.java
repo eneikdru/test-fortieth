@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.List;
+import java.util.ArrayList;
 
 @Entity
 @Table(name = "kb_documents")
@@ -36,6 +37,12 @@ public class KbDocument {
 
     @OneToMany(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<KbDocumentVersion> versions;
+
+    @OneToMany(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<KbDocumentComment> comments = new ArrayList<>();
+
+    @OneToMany(mappedBy = "document", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<KbDocumentUpdateRequest> updateRequests = new ArrayList<>();
 
     @PrePersist
     protected void onCreate() {
@@ -72,4 +79,10 @@ public class KbDocument {
 
     public List<KbDocumentVersion> getVersions() { return versions; }
     public void setVersions(List<KbDocumentVersion> versions) { this.versions = versions; }
+
+    public List<KbDocumentComment> getComments() { return comments; }
+    public void setComments(List<KbDocumentComment> comments) { this.comments = comments; }
+
+    public List<KbDocumentUpdateRequest> getUpdateRequests() { return updateRequests; }
+    public void setUpdateRequests(List<KbDocumentUpdateRequest> updateRequests) { this.updateRequests = updateRequests; }
 }

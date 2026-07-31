@@ -27,6 +27,8 @@ public class KbDocumentController {
     private final KbDocumentVersionRepository versionRepository;
     private final KbUserRepository userRepository;
     private final KbAuditLogRepository auditLogRepository;
+    private final KbDocumentCommentRepository commentRepository;
+    private final KbDocumentUpdateRequestRepository updateRequestRepository;
 
     private static final String STORAGE_DIR = "data/storage";
 
@@ -40,11 +42,15 @@ public class KbDocumentController {
     public KbDocumentController(KbDocumentRepository documentRepository,
                                 KbDocumentVersionRepository versionRepository,
                                 KbUserRepository userRepository,
-                                KbAuditLogRepository auditLogRepository) {
+                                KbAuditLogRepository auditLogRepository,
+                                KbDocumentCommentRepository commentRepository,
+                                KbDocumentUpdateRequestRepository updateRequestRepository) {
         this.documentRepository = documentRepository;
         this.versionRepository = versionRepository;
         this.userRepository = userRepository;
         this.auditLogRepository = auditLogRepository;
+        this.commentRepository = commentRepository;
+        this.updateRequestRepository = updateRequestRepository;
     }
 
     private KbUser getOrCreateSystemUser() {
@@ -469,6 +475,123 @@ public class KbDocumentController {
             .body(content);
     }
 
+    @PostMapping("/{id}/comments")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CommentDto addComment(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body,
+            @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
+
+        KbDocument doc = documentRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+
+        KbUser user = resolveUser(usernameHeader, roleHeader);
+
+        String commentText = body != null ? body.get("commentText") : null;
+        if (commentText == null || commentText.trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Comment text is required");
+        }
+
+        KbDocumentComment comment = new KbDocumentComment();
+        comment.setDocument(doc);
+        comment.setUser(user);
+        comment.setCommentText(commentText.trim());
+        comment = commentRepository.save(comment);
+
+        logAction(user, "ADD_COMMENT", "KbDocument", id, "Comment added: " + comment.getId());
+
+        DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE_TIME;
+        CommentDto dto = new CommentDto();
+        dto.setId(comment.getId());
+        dto.setDocumentId(doc.getId());
+        dto.setUserId(user.getId());
+        dto.setUsername(user.getUsername());
+        dto.setCommentText(comment.getCommentText());
+        dto.setCreatedAt(comment.getCreatedAt().format(dtf));
+        return dto;
+    }
+
+    @PostMapping("/{id}/update-requests")
+    @ResponseStatus(HttpStatus.CREATED)
+    public UpdateRequestDto addUpdateRequest(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body,
+            @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
+
+        KbDocument doc = documentRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+
+        KbUser user = resolveUser(usernameHeader, roleHeader);
+
+        String requestText = body != null ? body.get("requestText") : null;
+        if (requestText == null || requestText.trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request text is required");
+        }
+
+        KbDocumentUpdateRequest request = new KbDocumentUpdateRequest();
+        request.setDocument(doc);
+        request.setUser(user);
+        request.setRequestText(requestText.trim());
+        request.setStatus("PENDING");
+        request = updateRequestRepository.save(request);
+
+        logAction(user, "SUBMIT_UPDATE_REQUEST", "KbDocument", id, "Update request submitted: " + request.getId());
+
+        DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE_TIME;
+        UpdateRequestDto dto = new UpdateRequestDto();
+        dto.setId(request.getId());
+        dto.setDocumentId(doc.getId());
+        dto.setUserId(user.getId());
+        dto.setUsername(user.getUsername());
+        dto.setRequestText(request.getRequestText());
+        dto.setStatus(request.getStatus());
+        dto.setCreatedAt(request.getCreatedAt().format(dtf));
+        dto.setUpdatedAt(request.getUpdatedAt().format(dtf));
+        return dto;
+    }
+
+    @PatchMapping("/update-requests/{requestId}/status")
+    @org.springframework.transaction.annotation.Transactional
+    public UpdateRequestDto updateRequestStatus(
+            @PathVariable Long requestId,
+            @RequestBody Map<String, String> body,
+            @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
+
+        KbUser user = resolveUser(usernameHeader, roleHeader);
+
+        String oldStatus = body != null ? body.get("oldStatus") : null;
+        String newStatus = body != null ? body.get("newStatus") : null;
+
+        if (oldStatus == null || oldStatus.trim().isEmpty() || newStatus == null || newStatus.trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "oldStatus and newStatus are required");
+        }
+
+        int updated = updateRequestRepository.updateStatusAtomically(requestId, oldStatus.trim(), newStatus.trim());
+        if (updated == 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Status transition failed or request not found");
+        }
+
+        KbDocumentUpdateRequest request = updateRequestRepository.findById(requestId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Update request not found"));
+
+        logAction(user, "TRANSITION_UPDATE_REQUEST_STATUS", "KbDocumentUpdateRequest", requestId, "Status transitioned from " + oldStatus + " to " + newStatus);
+
+        DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE_TIME;
+        UpdateRequestDto dto = new UpdateRequestDto();
+        dto.setId(request.getId());
+        dto.setDocumentId(request.getDocument().getId());
+        dto.setUserId(request.getUser().getId());
+        dto.setUsername(request.getUser().getUsername());
+        dto.setRequestText(request.getRequestText());
+        dto.setStatus(request.getStatus());
+        dto.setCreatedAt(request.getCreatedAt().format(dtf));
+        dto.setUpdatedAt(request.getUpdatedAt().format(dtf));
+        return dto;
+    }
+
     private String getFileExtension(String filename) {
         int lastDot = filename.lastIndexOf('.');
         if (lastDot == -1) {
@@ -499,7 +622,107 @@ public class KbDocumentController {
         resp.setCreatedAt(doc.getCreatedAt().format(dtf));
         resp.setUpdatedAt(doc.getUpdatedAt().format(dtf));
 
+        List<KbDocumentComment> commentsList = commentRepository.findByDocumentId(doc.getId());
+        if (commentsList != null) {
+            resp.setComments(commentsList.stream()
+                .map(c -> {
+                    CommentDto dto = new CommentDto();
+                    dto.setId(c.getId());
+                    dto.setDocumentId(doc.getId());
+                    dto.setUserId(c.getUser().getId());
+                    dto.setUsername(c.getUser().getUsername());
+                    dto.setCommentText(c.getCommentText());
+                    dto.setCreatedAt(c.getCreatedAt().format(dtf));
+                    return dto;
+                })
+                .collect(Collectors.toList()));
+        } else {
+            resp.setComments(Collections.emptyList());
+        }
+
+        List<KbDocumentUpdateRequest> updatesList = updateRequestRepository.findByDocumentId(doc.getId());
+        if (updatesList != null) {
+            resp.setUpdateRequests(updatesList.stream()
+                .map(r -> {
+                    UpdateRequestDto dto = new UpdateRequestDto();
+                    dto.setId(r.getId());
+                    dto.setDocumentId(doc.getId());
+                    dto.setUserId(r.getUser().getId());
+                    dto.setUsername(r.getUser().getUsername());
+                    dto.setRequestText(r.getRequestText());
+                    dto.setStatus(r.getStatus());
+                    dto.setCreatedAt(r.getCreatedAt().format(dtf));
+                    dto.setUpdatedAt(r.getUpdatedAt().format(dtf));
+                    return dto;
+                })
+                .collect(Collectors.toList()));
+        } else {
+            resp.setUpdateRequests(Collections.emptyList());
+        }
+
         return resp;
+    }
+
+    public static class CommentDto {
+        private Long id;
+        private Long documentId;
+        private Long userId;
+        private String username;
+        private String commentText;
+        private String createdAt;
+
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+
+        public Long getDocumentId() { return documentId; }
+        public void setDocumentId(Long documentId) { this.documentId = documentId; }
+
+        public Long getUserId() { return userId; }
+        public void setUserId(Long userId) { this.userId = userId; }
+
+        public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
+
+        public String getCommentText() { return commentText; }
+        public void setCommentText(String commentText) { this.commentText = commentText; }
+
+        public String getCreatedAt() { return createdAt; }
+        public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+    }
+
+    public static class UpdateRequestDto {
+        private Long id;
+        private Long documentId;
+        private Long userId;
+        private String username;
+        private String requestText;
+        private String status;
+        private String createdAt;
+        private String updatedAt;
+
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+
+        public Long getDocumentId() { return documentId; }
+        public void setDocumentId(Long documentId) { this.documentId = documentId; }
+
+        public Long getUserId() { return userId; }
+        public void setUserId(Long userId) { this.userId = userId; }
+
+        public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
+
+        public String getRequestText() { return requestText; }
+        public void setRequestText(String requestText) { this.requestText = requestText; }
+
+        public String getStatus() { return status; }
+        public void setStatus(String status) { this.status = status; }
+
+        public String getCreatedAt() { return createdAt; }
+        public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+
+        public String getUpdatedAt() { return updatedAt; }
+        public void setUpdatedAt(String updatedAt) { this.updatedAt = updatedAt; }
     }
 
     public static class DocumentResponse {
@@ -513,6 +736,8 @@ public class KbDocumentController {
         private String filePath;
         private String createdAt;
         private String updatedAt;
+        private List<CommentDto> comments = new ArrayList<>();
+        private List<UpdateRequestDto> updateRequests = new ArrayList<>();
 
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
@@ -543,5 +768,11 @@ public class KbDocumentController {
 
         public String getUpdatedAt() { return updatedAt; }
         public void setUpdatedAt(String updatedAt) { this.updatedAt = updatedAt; }
+
+        public List<CommentDto> getComments() { return comments; }
+        public void setComments(List<CommentDto> comments) { this.comments = comments; }
+
+        public List<UpdateRequestDto> getUpdateRequests() { return updateRequests; }
+        public void setUpdateRequests(List<UpdateRequestDto> updateRequests) { this.updateRequests = updateRequests; }
     }
 }
