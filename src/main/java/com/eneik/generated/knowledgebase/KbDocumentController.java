@@ -68,6 +68,19 @@ public class KbDocumentController {
             });
     }
 
+    /**
+     * Resolves the authenticated user from request context (JWT or Headers).
+     * <p>
+     * Grounded under Jason Stanley's Principle of Semantic Contextualism and the
+     * {@code DZHEYSON_STENLI_04_INDEXICAL_CONTEXT_LOCK} pattern, ensuring that indexical
+     * attributes (current user session, identity) are strictly bound to the explicit JWT
+     * authorization context block, completely preventing cross-user contextual or session data leakage.
+     * </p>
+     *
+     * @param usernameHeader optional fallback/spoof-prevention username header
+     * @param roleHeader optional fallback/spoof-prevention role header
+     * @return the resolved, persisted KbUser entity
+     */
     private KbUser resolveUser(String usernameHeader, String roleHeader) {
         String username = null;
         String role = null;

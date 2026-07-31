@@ -154,6 +154,22 @@ public class KbDocumentCommentIntegrationTest {
     }
 
     @Test
+    public void testSubmitCommentToNonExistentDocumentReturns404NotFound() throws Exception {
+        String reviewerToken = getJwtToken("reviewer_alice", "ADMINISTRATOR");
+
+        String commentJson = "{"
+                + "\"content\": \"Comment on non-existent document.\","
+                + "\"type\": \"COMMENT\""
+                + "}";
+
+        mockMvc.perform(post("/api/v1/integration/documents/{id}/comments", 999999L)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(commentJson)
+                        .header("Authorization", "Bearer " + reviewerToken))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     public void testSubmitCommentWithEmptyContentReturns400BadRequest() throws Exception {
         String reviewerToken = getJwtToken("reviewer_alice", "ADMINISTRATOR");
 
