@@ -305,4 +305,66 @@ public class KbUserPreferencesIntegrationTest {
                         .header("Authorization", "Bearer invalid-jwt-token"))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    public void testSearchAndDocumentLogicForFavoritesAndSavedQueries() throws Exception {
+        String token = getJwtToken("search_user", "STUDENT");
+
+        // 1. Initial State: search query list is empty
+        mockMvc.perform(get("/api/v1/integration/preferences/saved-queries")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(0)));
+
+        // 2. Perform a search with query "Guidelines". This should auto-save the query.
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("query", "Guidelines")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2))) // both documents have "Guidelines" in their titles
+                .andExpect(jsonPath("$[0].isFavorite", is(false)))
+                .andExpect(jsonPath("$[1].isFavorite", is(false)));
+
+        // 3. Verify the query was auto-saved
+        String savedQueriesStr = mockMvc.perform(get("/api/v1/integration/preferences/saved-queries")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].queryText", is("Guidelines")))
+                .andReturn().getResponse().getContentAsString();
+
+        Long savedQueryId = Long.parseLong(savedQueriesStr.split("\"id\":")[1].split(",")[0].trim());
+
+        // 4. Mark document 1 as favorite
+        mockMvc.perform(post("/api/v1/integration/preferences/favorites")
+                        .param("documentId", documentId1.toString())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isCreated());
+
+        // 5. Search again: document 1 should have isFavorite = true, document 2 should have isFavorite = false
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].id", is(documentId1.intValue())))
+                .andExpect(jsonPath("$[0].isFavorite", is(true)))
+                .andExpect(jsonPath("$[1].id", is(documentId2.intValue())))
+                .andExpect(jsonPath("$[1].isFavorite", is(false)));
+
+        // 6. Search with favoritesOnly = true: should only return document 1
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("favoritesOnly", "true")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].id", is(documentId1.intValue())))
+                .andExpect(jsonPath("$[0].isFavorite", is(true)));
+
+        // 7. Search using savedQueryId: should execute search using the auto-saved "Guidelines" query
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("savedQueryId", savedQueryId.toString())
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)));
+    }
 }

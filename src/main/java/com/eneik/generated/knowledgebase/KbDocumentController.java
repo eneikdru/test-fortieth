@@ -30,6 +30,8 @@ public class KbDocumentController {
     private final KbUserRepository userRepository;
     private final KbAuditLogRepository auditLogRepository;
     private final KbDocumentCommentRepository commentRepository;
+    private final KbUserFavoriteRepository userFavoriteRepository;
+    private final KbSavedQueryRepository savedQueryRepository;
 
     @Autowired
     private JwtService jwtService;
@@ -50,12 +52,16 @@ public class KbDocumentController {
                                 KbDocumentVersionRepository versionRepository,
                                 KbUserRepository userRepository,
                                 KbAuditLogRepository auditLogRepository,
-                                KbDocumentCommentRepository commentRepository) {
+                                KbDocumentCommentRepository commentRepository,
+                                KbUserFavoriteRepository userFavoriteRepository,
+                                KbSavedQueryRepository savedQueryRepository) {
         this.documentRepository = documentRepository;
         this.versionRepository = versionRepository;
         this.userRepository = userRepository;
         this.auditLogRepository = auditLogRepository;
         this.commentRepository = commentRepository;
+        this.userFavoriteRepository = userFavoriteRepository;
+        this.savedQueryRepository = savedQueryRepository;
     }
 
     private KbUser getOrCreateSystemUser() {
@@ -269,6 +275,8 @@ public class KbDocumentController {
             @RequestParam(required = false) String specialty,
             @RequestParam(required = false) String educationLevel,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime updatedAfter,
+            @RequestParam(required = false) Boolean favoritesOnly,
+            @RequestParam(required = false) Long savedQueryId,
             @RequestParam(required = false) Integer page,
             @RequestParam(required = false) Integer size,
             @RequestParam(required = false) Integer pageNumber,
@@ -279,15 +287,44 @@ public class KbDocumentController {
             @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
 
         KbUser user = resolveUser(usernameHeader, roleHeader);
+
+        if (savedQueryId != null && user != null) {
+            KbSavedQuery saved = savedQueryRepository.findById(savedQueryId).orElse(null);
+            if (saved != null && saved.getUser().getId().equals(user.getId())) {
+                query = saved.getQueryText();
+            }
+        }
+
         if (query != null && !query.trim().isEmpty()) {
             logAction(user, "SEARCH", "Search", null, query.trim());
+            if (user != null) {
+                String trimmedQuery = query.trim();
+                boolean alreadySaved = savedQueryRepository.findByUserId(user.getId()).stream()
+                    .anyMatch(q -> q.getQueryText().equalsIgnoreCase(trimmedQuery));
+                if (!alreadySaved) {
+                    KbSavedQuery savedQuery = new KbSavedQuery(user, trimmedQuery);
+                    savedQueryRepository.save(savedQuery);
+                }
+            }
         }
+
+        final Set<Long> favoriteDocIds = (favoritesOnly != null && favoritesOnly && user != null)
+            ? userFavoriteRepository.findByUserId(user.getId()).stream()
+                .map(fav -> fav.getDocument().getId())
+                .collect(Collectors.toSet())
+            : Collections.emptySet();
 
         List<KbDocument> docs = documentRepository.findAll();
         List<String> expandedTerms = expandSearchTerms(query);
 
         List<DocumentResponse> results = docs.stream()
             .filter(doc -> {
+                if (favoritesOnly != null && favoritesOnly) {
+                    if (!favoriteDocIds.contains(doc.getId())) {
+                        return false;
+                    }
+                }
+
                 if (doc.getVersions() == null || doc.getVersions().isEmpty()) {
                     return false;
                 }
@@ -393,7 +430,7 @@ public class KbDocumentController {
 
                 return true;
             })
-            .map(this::mapToResponse)
+            .map(doc -> mapToResponse(doc, user))
             .collect(Collectors.toList());
 
         // Resolve page/size or limit/offset
@@ -503,7 +540,7 @@ public class KbDocumentController {
 
         logAction(systemUser, "DOCUMENT_CREATE", "KbDocument", doc.getId(), "Document uploaded: " + title);
 
-        return mapToResponse(doc);
+        return mapToResponse(doc, systemUser);
     }
 
     @GetMapping("/{id}")
@@ -517,7 +554,7 @@ public class KbDocumentController {
         KbUser systemUser = resolveUser(usernameHeader, roleHeader);
         logAction(systemUser, "VIEW", "KbDocument", id, doc.getTitle());
 
-        return mapToResponse(doc);
+        return mapToResponse(doc, systemUser);
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -593,7 +630,7 @@ public class KbDocumentController {
 
         logAction(systemUser, "DOCUMENT_UPDATE", "KbDocument", doc.getId(), "Document updated: " + doc.getTitle());
 
-        return mapToResponse(doc);
+        return mapToResponse(doc, systemUser);
     }
 
     @DeleteMapping("/{id}")
@@ -776,7 +813,7 @@ public class KbDocumentController {
         return resp;
     }
 
-    private DocumentResponse mapToResponse(KbDocument doc) {
+    private DocumentResponse mapToResponse(KbDocument doc, KbUser user) {
         KbDocumentVersion latest = doc.getVersions().stream()
             .max(Comparator.comparing(KbDocumentVersion::getVersionNumber))
             .orElse(null);
@@ -814,6 +851,13 @@ public class KbDocumentController {
             resp.setComments(Collections.emptyList());
         }
 
+        if (user != null) {
+            KbUserFavoriteId favId = new KbUserFavoriteId(user.getId(), doc.getId());
+            resp.setIsFavorite(userFavoriteRepository.existsById(favId));
+        } else {
+            resp.setIsFavorite(false);
+        }
+
         return resp;
     }
 
@@ -829,6 +873,7 @@ public class KbDocumentController {
         private String createdAt;
         private String updatedAt;
         private List<CommentResponse> comments;
+        private Boolean isFavorite;
 
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
@@ -862,6 +907,9 @@ public class KbDocumentController {
 
         public List<CommentResponse> getComments() { return comments; }
         public void setComments(List<CommentResponse> comments) { this.comments = comments; }
+
+        public Boolean getIsFavorite() { return isFavorite; }
+        public void setIsFavorite(Boolean isFavorite) { this.isFavorite = isFavorite; }
     }
 
     public static class CommentRequest {
