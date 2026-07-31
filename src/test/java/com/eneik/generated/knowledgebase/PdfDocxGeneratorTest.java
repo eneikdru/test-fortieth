@@ -121,4 +121,38 @@ public class PdfDocxGeneratorTest {
         assertTrue(foundDocumentXml);
         assertTrue(documentXmlContent.contains("<w:t>Document Title: Title</w:t>"));
     }
+
+    @Test
+    public void testPdfAndDocxGracefulNullHandling() throws Exception {
+        // Test with null/empty values to verify that they are handled elegantly as "-" rather than raw "null"
+        byte[] pdfBytes = PdfGenerator.generate(null, null, null, "");
+        assertNotNull(pdfBytes);
+        String pdfStr = new String(pdfBytes, StandardCharsets.UTF_8);
+        assertTrue(pdfStr.contains("Document Title: -"));
+        assertTrue(pdfStr.contains("Category: -"));
+        assertTrue(pdfStr.contains("Tags: -"));
+
+        byte[] docxBytes = DocxGenerator.generate("", "", " ", null);
+        assertNotNull(docxBytes);
+        ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(docxBytes));
+        ZipEntry entry;
+        String docXmlContent = "";
+        while ((entry = zis.getNextEntry()) != null) {
+            if ("word/document.xml".equals(entry.getName())) {
+                byte[] buffer = new byte[8192];
+                int bytesRead;
+                StringBuilder sb = new StringBuilder();
+                while ((bytesRead = zis.read(buffer)) != -1) {
+                    sb.append(new String(buffer, 0, bytesRead, StandardCharsets.UTF_8));
+                }
+                docXmlContent = sb.toString();
+            }
+            zis.closeEntry();
+        }
+        zis.close();
+
+        assertTrue(docXmlContent.contains("<w:t>Document Title: -</w:t>"));
+        assertTrue(docXmlContent.contains("<w:t>Category: -</w:t>"));
+        assertTrue(docXmlContent.contains("<w:t>Tags: -</w:t>"));
+    }
 }

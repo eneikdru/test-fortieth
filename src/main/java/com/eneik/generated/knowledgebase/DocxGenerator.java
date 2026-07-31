@@ -41,17 +41,19 @@ public class DocxGenerator {
             sb.append("  <w:body>\n");
 
             // Add fields
-            addParagraph(sb, "Document Title: " + title);
-            addParagraph(sb, "Category: " + category);
-            addParagraph(sb, "Tags: " + tags);
+            addParagraph(sb, "Document Title: " + (title != null && !title.trim().isEmpty() ? title : "-"));
+            addParagraph(sb, "Category: " + (category != null && !category.trim().isEmpty() ? category : "-"));
+            addParagraph(sb, "Tags: " + (tags != null && !tags.trim().isEmpty() ? tags : "-"));
             addParagraph(sb, "");
             addParagraph(sb, "Content:");
 
-            if (content != null) {
+            if (content != null && !content.trim().isEmpty()) {
                 String[] lines = content.split("\\r?\\n");
                 for (String line : lines) {
                     addParagraph(sb, line);
                 }
+            } else {
+                addParagraph(sb, "-");
             }
 
             sb.append("  </w:body>\n");
