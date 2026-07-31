@@ -418,6 +418,7 @@ public class KbDocumentController {
     public ResponseEntity<byte[]> downloadDocument(
             @PathVariable Long id,
             @PathVariable Integer versionNumber,
+            @RequestParam(value = "format", required = false) String format,
             @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
             @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
         KbDocument doc = documentRepository.findById(id)
@@ -430,6 +431,23 @@ public class KbDocumentController {
 
         KbUser systemUser = resolveUser(usernameHeader, roleHeader);
         logAction(systemUser, "DOWNLOAD", "KbDocument", id, doc.getTitle() + " (v" + versionNumber + ")");
+
+        if (format != null && !format.trim().isEmpty()) {
+            String cleanFormat = format.trim().toLowerCase();
+            if ("pdf".equals(cleanFormat)) {
+                byte[] pdfBytes = PdfGenerator.generate(doc.getTitle(), doc.getCategory(), String.join(", ", doc.getTags()), version.getIndexedContent());
+                return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header("Content-Disposition", "attachment; filename=\"export_" + id + ".pdf\"")
+                    .body(pdfBytes);
+            } else if ("docx".equals(cleanFormat)) {
+                byte[] docxBytes = DocxGenerator.generate(doc.getTitle(), doc.getCategory(), String.join(", ", doc.getTags()), version.getIndexedContent());
+                return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                    .header("Content-Disposition", "attachment; filename=\"export_" + id + ".docx\"")
+                    .body(docxBytes);
+            }
+        }
 
         // Try to load actual file from storage
         String originalFilename = version.getFilePath().substring(version.getFilePath().lastIndexOf('/') + 1);
@@ -467,6 +485,40 @@ public class KbDocumentController {
         return ResponseEntity.ok()
             .contentType(MediaType.APPLICATION_OCTET_STREAM)
             .body(content);
+    }
+
+    @GetMapping("/{id}/export")
+    public ResponseEntity<byte[]> exportDocument(
+            @PathVariable Long id,
+            @RequestParam(value = "format", required = false) String format,
+            @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
+        KbDocument doc = documentRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+
+        KbDocumentVersion latest = doc.getVersions().stream()
+            .max(Comparator.comparing(KbDocumentVersion::getVersionNumber))
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "No document version found"));
+
+        KbUser systemUser = resolveUser(usernameHeader, roleHeader);
+        logAction(systemUser, "EXPORT", "KbDocument", id, doc.getTitle() + " format=" + format);
+
+        String cleanFormat = (format != null) ? format.trim().toLowerCase() : "pdf";
+        if ("pdf".equals(cleanFormat)) {
+            byte[] pdfBytes = PdfGenerator.generate(doc.getTitle(), doc.getCategory(), String.join(", ", doc.getTags()), latest.getIndexedContent());
+            return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .header("Content-Disposition", "attachment; filename=\"export_" + id + ".pdf\"")
+                .body(pdfBytes);
+        } else if ("docx".equals(cleanFormat)) {
+            byte[] docxBytes = DocxGenerator.generate(doc.getTitle(), doc.getCategory(), String.join(", ", doc.getTags()), latest.getIndexedContent());
+            return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                .header("Content-Disposition", "attachment; filename=\"export_" + id + ".docx\"")
+                .body(docxBytes);
+        } else {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported export format: " + format);
+        }
     }
 
     private String getFileExtension(String filename) {
