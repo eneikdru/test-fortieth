@@ -57,6 +57,34 @@ public class KbDocumentController {
             });
     }
 
+    private KbUser resolveUser(String usernameHeader, String roleHeader) {
+        String username = (usernameHeader != null && !usernameHeader.trim().isEmpty()) ? usernameHeader.trim() : "system_user";
+        String role = (roleHeader != null && !roleHeader.trim().isEmpty()) ? roleHeader.trim() : "ADMINISTRATOR";
+
+        return userRepository.findByUsername(username)
+            .map(user -> {
+                if (roleHeader != null && !roleHeader.trim().isEmpty() && !user.getRole().equalsIgnoreCase(roleHeader.trim())) {
+                    user.setRole(roleHeader.trim().toUpperCase());
+                    return userRepository.save(user);
+                }
+                return user;
+            })
+            .orElseGet(() -> {
+                KbUser user = new KbUser();
+                user.setUsername(username);
+                user.setRole(role.toUpperCase());
+                return userRepository.save(user);
+            });
+    }
+
+    private boolean isStudent(KbUser user) {
+        if (user == null || user.getRole() == null) {
+            return false;
+        }
+        String role = user.getRole().trim().toUpperCase();
+        return "STUDENT".equals(role) || "ORDINATOR".equals(role) || "RESIDENT".equals(role) || "POSTGRADUATE".equals(role) || "LISTENER".equals(role);
+    }
+
     private void logAction(KbUser user, String action, String targetEntity, Long targetId, String details) {
         KbAuditLog log = new KbAuditLog();
         log.setUser(user);
@@ -111,9 +139,11 @@ public class KbDocumentController {
             @RequestParam(required = false) String documentType,
             @RequestParam(required = false) String specialty,
             @RequestParam(required = false) String educationLevel,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime updatedAfter) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime updatedAfter,
+            @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
 
-        KbUser user = getOrCreateSystemUser();
+        KbUser user = resolveUser(usernameHeader, roleHeader);
         if (query != null && !query.trim().isEmpty()) {
             logAction(user, "SEARCH", "Search", null, query.trim());
         }
@@ -206,7 +236,9 @@ public class KbDocumentController {
             @RequestParam("title") String title,
             @RequestParam(value = "category", required = false) String category,
             @RequestParam(value = "tags", required = false) List<String> tags,
-            @RequestParam("file") MultipartFile file) {
+            @RequestParam("file") MultipartFile file,
+            @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
 
         if (title == null || title.trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Title is required");
@@ -215,7 +247,10 @@ public class KbDocumentController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "File is required");
         }
 
-        KbUser systemUser = getOrCreateSystemUser();
+        KbUser systemUser = resolveUser(usernameHeader, roleHeader);
+        if (isStudent(systemUser)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Students are not authorized to upload documents");
+        }
 
         // 1. Create document
         KbDocument doc = new KbDocument();
@@ -271,11 +306,14 @@ public class KbDocumentController {
     }
 
     @GetMapping("/{id}")
-    public DocumentResponse getDocumentById(@PathVariable Long id) {
+    public DocumentResponse getDocumentById(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
         KbDocument doc = documentRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
 
-        KbUser systemUser = getOrCreateSystemUser();
+        KbUser systemUser = resolveUser(usernameHeader, roleHeader);
         logAction(systemUser, "VIEW", "KbDocument", id, doc.getTitle());
 
         return mapToResponse(doc);
@@ -287,12 +325,17 @@ public class KbDocumentController {
             @RequestParam(value = "title", required = false) String title,
             @RequestParam(value = "category", required = false) String category,
             @RequestParam(value = "tags", required = false) List<String> tags,
-            @RequestParam(value = "file", required = false) MultipartFile file) {
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
+
+        KbUser systemUser = resolveUser(usernameHeader, roleHeader);
+        if (isStudent(systemUser)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Students are not authorized to edit documents");
+        }
 
         KbDocument doc = documentRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
-
-        KbUser systemUser = getOrCreateSystemUser();
 
         if (title != null && !title.trim().isEmpty()) {
             doc.setTitle(title.trim());
@@ -354,11 +397,17 @@ public class KbDocumentController {
 
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteDocument(@PathVariable Long id) {
+    public void deleteDocument(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
+        KbUser systemUser = resolveUser(usernameHeader, roleHeader);
+        if (isStudent(systemUser)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: Students are not authorized to delete documents");
+        }
+
         KbDocument doc = documentRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
-
-        KbUser systemUser = getOrCreateSystemUser();
 
         documentRepository.delete(doc);
 
@@ -366,7 +415,11 @@ public class KbDocumentController {
     }
 
     @GetMapping("/download/{id}/version/{versionNumber}")
-    public ResponseEntity<byte[]> downloadDocument(@PathVariable Long id, @PathVariable Integer versionNumber) {
+    public ResponseEntity<byte[]> downloadDocument(
+            @PathVariable Long id,
+            @PathVariable Integer versionNumber,
+            @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
         KbDocument doc = documentRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
 
@@ -375,7 +428,7 @@ public class KbDocumentController {
             .findFirst()
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Version not found"));
 
-        KbUser systemUser = getOrCreateSystemUser();
+        KbUser systemUser = resolveUser(usernameHeader, roleHeader);
         logAction(systemUser, "DOWNLOAD", "KbDocument", id, doc.getTitle() + " (v" + versionNumber + ")");
 
         // Try to load actual file from storage
