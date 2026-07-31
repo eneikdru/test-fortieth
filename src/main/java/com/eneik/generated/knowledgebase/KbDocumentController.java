@@ -635,14 +635,15 @@ public class KbDocumentController {
 
         if (format != null && !format.trim().isEmpty()) {
             String cleanFormat = format.trim().toLowerCase();
+            String tagsStr = (doc.getTags() != null && !doc.getTags().isEmpty()) ? String.join(", ", doc.getTags()) : "-";
             if ("pdf".equals(cleanFormat)) {
-                byte[] pdfBytes = PdfGenerator.generate(doc.getTitle(), doc.getCategory(), String.join(", ", doc.getTags()), version.getIndexedContent());
+                byte[] pdfBytes = PdfGenerator.generate(doc.getTitle(), doc.getCategory(), tagsStr, version.getIndexedContent());
                 return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_PDF)
                     .header("Content-Disposition", "attachment; filename=\"export_" + id + ".pdf\"")
                     .body(pdfBytes);
             } else if ("docx".equals(cleanFormat)) {
-                byte[] docxBytes = DocxGenerator.generate(doc.getTitle(), doc.getCategory(), String.join(", ", doc.getTags()), version.getIndexedContent());
+                byte[] docxBytes = DocxGenerator.generate(doc.getTitle(), doc.getCategory(), tagsStr, version.getIndexedContent());
                 return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
                     .header("Content-Disposition", "attachment; filename=\"export_" + id + ".docx\"")
@@ -705,14 +706,15 @@ public class KbDocumentController {
         logAction(systemUser, "EXPORT", "KbDocument", id, doc.getTitle() + " format=" + format);
 
         String cleanFormat = (format != null) ? format.trim().toLowerCase() : "pdf";
+        String tagsStr = (doc.getTags() != null && !doc.getTags().isEmpty()) ? String.join(", ", doc.getTags()) : "-";
         if ("pdf".equals(cleanFormat)) {
-            byte[] pdfBytes = PdfGenerator.generate(doc.getTitle(), doc.getCategory(), String.join(", ", doc.getTags()), latest.getIndexedContent());
+            byte[] pdfBytes = PdfGenerator.generate(doc.getTitle(), doc.getCategory(), tagsStr, latest.getIndexedContent());
             return ResponseEntity.ok()
                 .contentType(MediaType.APPLICATION_PDF)
                 .header("Content-Disposition", "attachment; filename=\"export_" + id + ".pdf\"")
                 .body(pdfBytes);
         } else if ("docx".equals(cleanFormat)) {
-            byte[] docxBytes = DocxGenerator.generate(doc.getTitle(), doc.getCategory(), String.join(", ", doc.getTags()), latest.getIndexedContent());
+            byte[] docxBytes = DocxGenerator.generate(doc.getTitle(), doc.getCategory(), tagsStr, latest.getIndexedContent());
             return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
                 .header("Content-Disposition", "attachment; filename=\"export_" + id + ".docx\"")

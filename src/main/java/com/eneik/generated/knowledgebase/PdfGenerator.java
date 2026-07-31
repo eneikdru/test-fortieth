@@ -36,16 +36,18 @@ public class PdfGenerator {
             ByteArrayOutputStream textStream = new ByteArrayOutputStream();
             textStream.write("BT\n/F1 12 Tf\n50 700 Td\n14 TL\n".getBytes(StandardCharsets.UTF_8));
 
-            writePdfLine(textStream, "Document Title: " + title);
-            writePdfLine(textStream, "Category: " + category);
-            writePdfLine(textStream, "Tags: " + tags);
+            writePdfLine(textStream, "Document Title: " + (title != null && !title.trim().isEmpty() ? title : "-"));
+            writePdfLine(textStream, "Category: " + (category != null && !category.trim().isEmpty() ? category : "-"));
+            writePdfLine(textStream, "Tags: " + (tags != null && !tags.trim().isEmpty() ? tags : "-"));
             writePdfLine(textStream, "");
             writePdfLine(textStream, "Content:");
-            if (content != null) {
+            if (content != null && !content.trim().isEmpty()) {
                 String[] lines = content.split("\\r?\\n");
                 for (String line : lines) {
                     writePdfLine(textStream, line);
                 }
+            } else {
+                writePdfLine(textStream, "-");
             }
             textStream.write("ET\n".getBytes(StandardCharsets.UTF_8));
             byte[] textBytes = textStream.toByteArray();
