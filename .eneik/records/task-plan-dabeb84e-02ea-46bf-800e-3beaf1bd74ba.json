@@ -1,0 +1,162 @@
+{
+  "epics": [
+    {
+      "existingEpicId": null,
+      "title": "Knowledge Base Content Collaboration",
+      "jtbd": "When viewing a document in the Knowledge Base, I want to submit persistent comments and update requests, so that I can collaborate with others on content revisions.",
+      "kanoClass": "Attractive",
+      "cynefinDomain": "complicated",
+      "sixSigmaMetric": "Increase average document comments to 1.5 per document",
+      "tocConstraintRef": "Document review and update latency",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: Users can submit persistent comments on documents",
+        "R2: Users can send update requests for documents"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Patch document viewer for comments and update requests",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing comments and update requests for this epic, I want to patch the existing backend code, so that content revision collaboration is achieved.",
+          "acceptanceCriteria": "Given an authenticated user viewing a document, When they submit a comment or update request, Then the data is saved and associated with the document.\nGiven the saved comment, When the document is retrieved, Then the comment is correctly available.",
+          "leanValue": "valuable",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "Content update processing bottleneck",
+          "sixSigmaMetric": "Achieve 99% success rate for comment persistence",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1",
+            "R2"
+          ]
+        }
+      ]
+    },
+    {
+      "existingEpicId": null,
+      "title": "Knowledge Base Personalization",
+      "jtbd": "When using the Knowledge Base, I want to save search queries and mark materials as favorites, so that I can quickly access them in subsequent sessions.",
+      "kanoClass": "Attractive",
+      "cynefinDomain": "clear",
+      "sixSigmaMetric": "Reduce repeat navigation time by 40%",
+      "tocConstraintRef": "User retrieval time for frequently used documents",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: Users can save search queries",
+        "R2: Users can mark materials as favorites for quick access"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Patch search and document logic for favorites and saved queries",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing saved queries and favorites for this epic, I want to patch the existing API to store user preferences, so that personalized quick access is achieved.",
+          "acceptanceCriteria": "Given an authenticated user, When they save a query or mark a document as favorite, Then the preference is persisted.\nGiven a persisted preference, When the user starts a new session, Then their saved queries and favorites are retrieved.",
+          "leanValue": "valuable",
+          "cynefinDomain": "clear",
+          "tocConstraintRef": "Search repetition waste",
+          "sixSigmaMetric": "Maintain < 100ms latency for retrieving user preferences",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1",
+            "R2"
+          ]
+        }
+      ]
+    },
+    {
+      "existingEpicId": null,
+      "title": "Dynamic Document Export Services",
+      "jtbd": "When viewing materials in the Knowledge Base, I want to export and download them as formatted PDF or DOCX files, so that I can easily print or read them offline.",
+      "kanoClass": "Must-Be",
+      "cynefinDomain": "complicated",
+      "sixSigmaMetric": "Achieve 99.9% successful generation of PDF and DOCX exports",
+      "tocConstraintRef": "Offline accessibility bottleneck",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: Users can export structured documents to PDF",
+        "R2: Users can export structured documents to DOCX"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Patch backend document endpoints for PDF and DOCX export",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing document export for this epic, I want to patch the existing document delivery code to generate PDF and DOCX formats, so that offline document reading is achieved.",
+          "acceptanceCriteria": "Given a structured document, When a user clicks export to PDF or DOCX, Then the backend dynamically generates a formatted file.\nGiven the generated file, When the user downloads it, Then it contains the accurate text and structure of the document.",
+          "leanValue": "valuable",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "Document formatting latency",
+          "sixSigmaMetric": "Ensure export generation time is under 2 seconds",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1",
+            "R2"
+          ]
+        }
+      ]
+    },
+    {
+      "existingEpicId": "14eda89f-2ca3-4387-9e55-25965de0b9b8",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "Increase overall system search accuracy by 25%",
+      "tocConstraintRef": "Search matching precision limitation",
+      "sourceIndex": 1,
+      "requirements": [
+        "R1: Search operations must support typo correction and fuzzy matching"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Patch existing search API for fuzzy matching and typo tolerance",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing fuzzy search for this epic, I want to enhance the existing search query logic with typo tolerance, so that robust search query matching is achieved.",
+          "acceptanceCriteria": "Given a search query with spelling errors, When the search is executed, Then the system employs fuzzy matching to understand the intent.\nGiven the corrected intent, When documents are queried, Then relevant documents matching the corrected terms are returned.",
+          "leanValue": "valuable",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "Search accuracy bottleneck",
+          "sixSigmaMetric": "Increase search result relevance for misspelled queries by 30%",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    },
+    {
+      "existingEpicId": null,
+      "title": "Secure Session and Authentication Management",
+      "jtbd": "When accessing the Knowledge Base, I want my identity to be securely authenticated and my session managed, so that unauthorized users cannot access sensitive blocks or spoof roles.",
+      "kanoClass": "Must-Be",
+      "cynefinDomain": "complicated",
+      "sixSigmaMetric": "Reduce unauthorized role spoofing attempts to 0",
+      "tocConstraintRef": "System security and access control vulnerability",
+      "sourceIndex": 2,
+      "requirements": [
+        "R1: System must validate login credentials",
+        "R2: System must issue and validate secure JWT session tokens to prevent role spoofing"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Patch authentication logic to validate credentials and JWTs",
+          "roleTag": "BARCAN-TAG-07",
+          "jtbd": "When implementing secure authentication for this epic, I want to replace header-based role trusts with strict JWT validation, so that unauthorized access prevention is achieved.",
+          "acceptanceCriteria": "Given a user providing valid credentials, When they log in, Then a secure JWT session token is generated.\nGiven a subsequent API request, When the JWT token is provided, Then the system securely authorizes the user and ignores any spoofed X-User-Role headers.",
+          "leanValue": "essential",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "Authentication flow security",
+          "sixSigmaMetric": "Achieve 100% rejection rate for forged headers",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1",
+            "R2"
+          ]
+        }
+      ]
+    }
+  ]
+}
