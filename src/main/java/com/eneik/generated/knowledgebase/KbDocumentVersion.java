@@ -24,6 +24,9 @@ public class KbDocumentVersion {
     @Column(name = "file_type")
     private String fileType;
 
+    @Column(name = "indexed_content")
+    private String indexedContent;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
     private KbUser createdBy;
@@ -51,6 +54,9 @@ public class KbDocumentVersion {
 
     public String getFileType() { return fileType; }
     public void setFileType(String fileType) { this.fileType = fileType; }
+
+    public String getIndexedContent() { return indexedContent; }
+    public void setIndexedContent(String indexedContent) { this.indexedContent = indexedContent; }
 
     public KbUser getCreatedBy() { return createdBy; }
     public void setCreatedBy(KbUser createdBy) { this.createdBy = createdBy; }
