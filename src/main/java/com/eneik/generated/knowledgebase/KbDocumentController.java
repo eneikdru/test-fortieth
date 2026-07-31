@@ -27,6 +27,7 @@ public class KbDocumentController {
     private final KbDocumentVersionRepository versionRepository;
     private final KbUserRepository userRepository;
     private final KbAuditLogRepository auditLogRepository;
+    private final KbDocumentCommentRepository commentRepository;
 
     private static final String STORAGE_DIR = "data/storage";
 
@@ -40,11 +41,13 @@ public class KbDocumentController {
     public KbDocumentController(KbDocumentRepository documentRepository,
                                 KbDocumentVersionRepository versionRepository,
                                 KbUserRepository userRepository,
-                                KbAuditLogRepository auditLogRepository) {
+                                KbAuditLogRepository auditLogRepository,
+                                KbDocumentCommentRepository commentRepository) {
         this.documentRepository = documentRepository;
         this.versionRepository = versionRepository;
         this.userRepository = userRepository;
         this.auditLogRepository = auditLogRepository;
+        this.commentRepository = commentRepository;
     }
 
     private KbUser getOrCreateSystemUser() {
@@ -477,6 +480,51 @@ public class KbDocumentController {
         return filename.substring(lastDot + 1).toLowerCase();
     }
 
+    @PostMapping("/{id}/comments")
+    @ResponseStatus(HttpStatus.CREATED)
+    public CommentResponse addComment(
+            @PathVariable Long id,
+            @RequestBody CommentRequest request,
+            @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
+
+        KbUser systemUser = resolveUser(usernameHeader, roleHeader);
+        KbDocument doc = documentRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+
+        if (request.getContent() == null || request.getContent().trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Comment content cannot be empty");
+        }
+
+        String type = request.getType();
+        if (type == null || type.trim().isEmpty()) {
+            type = "COMMENT";
+        } else {
+            type = type.trim().toUpperCase();
+            if (!"COMMENT".equals(type) && !"UPDATE_REQUEST".equals(type)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid comment type");
+            }
+        }
+
+        KbDocumentComment comment = new KbDocumentComment();
+        comment.setDocument(doc);
+        comment.setAuthor(systemUser);
+        comment.setContent(request.getContent().trim());
+        comment.setType(type);
+        comment = commentRepository.save(comment);
+
+        logAction(systemUser, "ADD_COMMENT", "KbDocument", id, "Added " + type + " to document: " + doc.getTitle());
+
+        CommentResponse resp = new CommentResponse();
+        resp.setId(comment.getId());
+        resp.setAuthorId(systemUser.getId());
+        resp.setAuthorUsername(systemUser.getUsername());
+        resp.setContent(comment.getContent());
+        resp.setType(comment.getType());
+        resp.setCreatedAt(comment.getCreatedAt().format(DateTimeFormatter.ISO_DATE_TIME));
+        return resp;
+    }
+
     private DocumentResponse mapToResponse(KbDocument doc) {
         KbDocumentVersion latest = doc.getVersions().stream()
             .max(Comparator.comparing(KbDocumentVersion::getVersionNumber))
@@ -499,6 +547,22 @@ public class KbDocumentController {
         resp.setCreatedAt(doc.getCreatedAt().format(dtf));
         resp.setUpdatedAt(doc.getUpdatedAt().format(dtf));
 
+        List<KbDocumentComment> commentsList = commentRepository.findByDocumentIdOrderByCreatedAtAsc(doc.getId());
+        if (commentsList != null) {
+            resp.setComments(commentsList.stream().map(c -> {
+                CommentResponse cr = new CommentResponse();
+                cr.setId(c.getId());
+                cr.setAuthorId(c.getAuthor().getId());
+                cr.setAuthorUsername(c.getAuthor().getUsername());
+                cr.setContent(c.getContent());
+                cr.setType(c.getType());
+                cr.setCreatedAt(c.getCreatedAt().format(dtf));
+                return cr;
+            }).collect(Collectors.toList()));
+        } else {
+            resp.setComments(Collections.emptyList());
+        }
+
         return resp;
     }
 
@@ -513,6 +577,7 @@ public class KbDocumentController {
         private String filePath;
         private String createdAt;
         private String updatedAt;
+        private List<CommentResponse> comments;
 
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
@@ -543,5 +608,46 @@ public class KbDocumentController {
 
         public String getUpdatedAt() { return updatedAt; }
         public void setUpdatedAt(String updatedAt) { this.updatedAt = updatedAt; }
+
+        public List<CommentResponse> getComments() { return comments; }
+        public void setComments(List<CommentResponse> comments) { this.comments = comments; }
+    }
+
+    public static class CommentRequest {
+        private String content;
+        private String type;
+
+        public String getContent() { return content; }
+        public void setContent(String content) { this.content = content; }
+
+        public String getType() { return type; }
+        public void setType(String type) { this.type = type; }
+    }
+
+    public static class CommentResponse {
+        private Long id;
+        private Long authorId;
+        private String authorUsername;
+        private String content;
+        private String type;
+        private String createdAt;
+
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+
+        public Long getAuthorId() { return authorId; }
+        public void setAuthorId(Long authorId) { this.authorId = authorId; }
+
+        public String getAuthorUsername() { return authorUsername; }
+        public void setAuthorUsername(String authorUsername) { this.authorUsername = authorUsername; }
+
+        public String getContent() { return content; }
+        public void setContent(String content) { this.content = content; }
+
+        public String getType() { return type; }
+        public void setType(String type) { this.type = type; }
+
+        public String getCreatedAt() { return createdAt; }
+        public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
     }
 }
