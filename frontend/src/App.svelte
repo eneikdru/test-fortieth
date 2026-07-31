@@ -2,6 +2,122 @@
   // Active Tab: 'search' (Knowledge Base), 'lms' (Canvas LMS Sync), 'messenger' (Messenger Subscriptions), 'profile' (Profile & Admin Tools)
   let currentTab = 'search';
 
+  // --- MOODLE FINANCIAL CONFIGURATION STATE ---
+  let moodleConfigScript = JSON.stringify({
+    "course": "Financial Administration 2026",
+    "categories": [
+      {
+        "name": "Basics of Wealth",
+        "description": "Fundamental principles of budgeting and interest rates",
+        "items": [
+          {
+            "title": "Personal Budgeting Masterclass",
+            "type": "Book",
+            "progress": "40%"
+          },
+          {
+            "title": "Understanding Interest Rates",
+            "type": "Page",
+            "status": "Completed"
+          }
+        ]
+      },
+      {
+        "name": "Advanced Growth",
+        "description": "Intermediate level investing, risks, and market dynamics",
+        "items": [
+          {
+            "title": "Stock Market 101",
+            "type": "Book",
+            "status": "New"
+          },
+          {
+            "title": "Risk Assessment",
+            "type": "Page",
+            "status": "Prerequisite needed"
+          }
+        ]
+      }
+    ],
+    "workloads": [
+      {
+        "specialty": "Epidemiology",
+        "hours": 120,
+        "clinicalHours": 80,
+        "salaryRate": "1,800 RUB/hr",
+        "guidelines": "Fulfill residency teaching requirements according to FBUN 2026 protocols."
+      },
+      {
+        "specialty": "Pediatrics",
+        "hours": 90,
+        "clinicalHours": 60,
+        "salaryRate": "1,650 RUB/hr",
+        "guidelines": "Must align clinical pediatric schedules with Rospotrebnadzor standards."
+      },
+      {
+        "specialty": "Infectious Diseases",
+        "hours": 110,
+        "clinicalHours": 70,
+        "salaryRate": "1,750 RUB/hr",
+        "guidelines": "Align with the state postgraduate standards and clinical safety procedures."
+      }
+    ]
+  }, null, 2);
+
+  let isConfiguring = false;
+  let configureProgress = 0;
+  let configureLogs = [];
+  let isScaffolded = false;
+  let moodleParsedConfig = null;
+
+  function executeMoodleScript() {
+    if (isConfiguring) return;
+    isConfiguring = true;
+    configureProgress = 0;
+    configureLogs = ["[INFO] - Starting Moodle Dashboard Configuration Agent"];
+
+    try {
+      moodleParsedConfig = JSON.parse(moodleConfigScript);
+    } catch (err) {
+      configureLogs = [
+        ...configureLogs,
+        `[ERROR] - Failed to parse configuration script: ${err.message}`,
+        "[ERROR] - Scaffolding aborted due to script errors."
+      ];
+      isConfiguring = false;
+      return;
+    }
+
+    let steps = [
+      { p: 15, log: "[INFO] - Successfully validated JSON structure and schemas." },
+      { p: 35, log: `[INFO] - Provisioning Moodle Course: "${moodleParsedConfig.course || 'Financial Administration'}"` },
+      { p: 55, log: `[INFO] - Creating categories: ${moodleParsedConfig.categories ? moodleParsedConfig.categories.map(c => '"' + c.name + '"').join(', ') : 'None'}` },
+      { p: 75, log: "[INFO] - Generating Books (mod_book) and Pages (mod_page) for budget block." },
+      { p: 90, log: "[INFO] - Deploying instructor workload framework guides and spreadsheets." },
+      { p: 100, log: "[SUCCESS] - Moodle Financial Block structures automated and scaffolded successfully!" }
+    ];
+
+    let currentStepIdx = 0;
+    let interval = setInterval(() => {
+      if (currentStepIdx < steps.length) {
+        let step = steps[currentStepIdx];
+        configureProgress = step.p;
+        configureLogs = [...configureLogs, step.log];
+        currentStepIdx++;
+      } else {
+        clearInterval(interval);
+        isConfiguring = false;
+        isScaffolded = true;
+      }
+    }, 400);
+  }
+
+  function resetMoodleDashboard() {
+    isScaffolded = false;
+    configureLogs = ["[INFO] - Reset complete. Dashboard is empty. Run the script to scaffold."];
+    configureProgress = 0;
+  }
+
   // Active Role for demonstration
   let currentRole = 'ADMINISTRATOR'; // ADMINISTRATOR, CONTENT_MANAGER, TEACHER, LEARNER
 
@@ -981,6 +1097,314 @@
         </div>
       </section>
 
+    <!-- Active Tab: MOODLE FINANCIAL (NEW) -->
+    {:else if currentTab === 'moodle'}
+      <section class="space-y-6" aria-labelledby="moodle-dashboard-heading">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-outline-variant">
+          <div>
+            <h2 id="moodle-dashboard-heading" class="font-headline-lg text-lg md:text-xl font-bold text-primary">Moodle Dashboard Automation</h2>
+            <p class="text-xs text-on-surface-variant">Automate structure mapping, deploy core activity modules (Books, Pages), and manage frameworks.</p>
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <span class="text-[11px] font-bold text-outline-variant uppercase">Current Perspective:</span>
+            <span class="bg-primary/10 text-primary border border-primary/20 px-2.5 py-1 rounded text-xs font-bold font-mono">
+              {currentRole}
+            </span>
+          </div>
+        </div>
+
+        <!-- Moodle Dashboard Configuration & Automation Control Panel -->
+        <div class="bg-white border border-outline-variant rounded-xl p-5 space-y-4 shadow-sm">
+          <div class="flex items-center gap-2 text-primary">
+            <span class="material-symbols-outlined text-secondary" aria-hidden="true">terminal</span>
+            <h3 class="font-title-lg text-base font-bold">Moodle Dashboard Configuration Script</h3>
+          </div>
+
+          <p class="text-xs text-on-surface-variant">
+            Write configuration scripts that generate the required Pages, Books, and categories for the financial block, so that the structure is automated.
+          </p>
+
+          <div class="space-y-3">
+            <label for="moodle-script-editor" class="block font-bold text-[10px] text-on-surface-variant uppercase tracking-wider">Configuration Script (JSON)</label>
+            <textarea
+              id="moodle-script-editor"
+              bind:value={moodleConfigScript}
+              rows="8"
+              class="w-full font-mono text-xs p-3 bg-slate-900 text-slate-100 rounded-lg border border-outline-variant focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary"
+              placeholder="Paste Moodle Configuration JSON here..."
+              disabled={isConfiguring}
+            ></textarea>
+          </div>
+
+          <!-- Execution Controls -->
+          <div class="flex flex-wrap gap-3">
+            <button
+              type="button"
+              class="h-10 px-5 bg-secondary text-on-secondary-fixed hover:bg-opacity-90 active:scale-95 rounded-lg font-bold text-xs uppercase tracking-wider flex items-center gap-2 transition-all shadow-sm"
+              on:click={executeMoodleScript}
+              disabled={isConfiguring}
+            >
+              {#if isConfiguring}
+                <span class="material-symbols-outlined text-sm animate-spin" aria-hidden="true">sync</span>
+                Executing Automation...
+              {:else}
+                <span class="material-symbols-outlined text-sm" aria-hidden="true">play_arrow</span>
+                Execute Configuration Script
+              {/if}
+            </button>
+
+            <button
+              type="button"
+              class="h-10 px-4 bg-white hover:bg-slate-50 border border-outline-variant rounded-lg text-xs font-bold uppercase flex items-center gap-2"
+              on:click={resetMoodleDashboard}
+              disabled={isConfiguring}
+            >
+              <span class="material-symbols-outlined text-sm" aria-hidden="true">restart_alt</span>
+              Reset Structure
+            </button>
+          </div>
+
+          <!-- Animated Execution Console Log -->
+          {#if isConfiguring || configureLogs.length > 0}
+            <div class="space-y-2 mt-4 animate-fade-in">
+              <div class="flex justify-between items-center text-xs font-bold text-on-surface-variant">
+                <span>Execution Status Console</span>
+                <span class="font-mono">{configureProgress}%</span>
+              </div>
+
+              <!-- Progress Bar -->
+              <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                <div class="bg-secondary h-full transition-all duration-200" style="width: {configureProgress}%"></div>
+              </div>
+
+              <!-- Terminal Block -->
+              <div class="bg-slate-950 border border-slate-800 rounded-lg p-3 font-mono text-[11px] text-green-400 space-y-1 overflow-y-auto max-h-[160px] shadow-inner">
+                {#each configureLogs as log}
+                  <div class="leading-relaxed">
+                    {#if log.includes('[SUCCESS]')}
+                      <span class="text-green-300 font-bold">{log}</span>
+                    {:else if log.includes('[ERROR]')}
+                      <span class="text-red-400 font-bold">{log}</span>
+                    {:else}
+                      <span class="text-slate-300">{log}</span>
+                    {/if}
+                  </div>
+                {/each}
+              </div>
+            </div>
+          {/if}
+        </div>
+
+        <!-- Scaffolded UI Dashboard Section -->
+        {#if isScaffolded && moodleParsedConfig}
+          <div class="space-y-6 mt-6 animate-fade-in">
+            <div class="border-t border-outline-variant pt-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+              <h3 class="font-headline-md text-base md:text-lg font-bold text-primary flex items-center gap-2">
+                <span class="material-symbols-outlined text-secondary" aria-hidden="true">dashboard_customize</span>
+                Scaffolded Moodle Course: "{moodleParsedConfig.course || 'Financial Administration 2026'}"
+              </h3>
+              <span class="bg-green-100 text-green-700 border border-green-200 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
+                Automated Structure Live
+              </span>
+            </div>
+
+            <!-- Categories and activity cards -->
+            {#if moodleParsedConfig.categories}
+              {#each moodleParsedConfig.categories as category}
+                <div class="space-y-3 bg-white border border-outline-variant rounded-xl p-4 md:p-5 shadow-sm">
+                  <div class="flex items-center justify-between border-b border-outline-variant pb-2">
+                    <div>
+                      <h4 class="font-title-lg text-sm md:text-base font-bold text-primary">{category.name}</h4>
+                      {#if category.description}
+                        <p class="text-[11px] text-on-surface-variant italic mt-0.5">{category.description}</p>
+                      {/if}
+                    </div>
+                    <span class="font-label-sm text-[10px] font-semibold text-on-surface-variant uppercase tracking-wider bg-surface-container px-2 py-0.5 rounded">
+                      {category.items ? category.items.length : 0} Items
+                    </span>
+                  </div>
+
+                  <!-- Category Items -->
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {#if category.items}
+                      {#each category.items as item}
+                        {#if item.title === 'Risk Assessment'}
+                          <!-- Locked Item -->
+                          <div class="bg-surface-container-low opacity-75 border border-outline-variant border-dashed rounded-xl overflow-hidden cursor-not-allowed">
+                            <div class="p-4 flex items-center gap-4">
+                              <div class="w-12 h-12 rounded-lg bg-surface-variant flex items-center justify-center shrink-0">
+                                <span class="material-symbols-outlined text-outline text-[24px]" aria-hidden="true">lock</span>
+                              </div>
+                              <div class="flex-grow min-w-0">
+                                <div class="flex justify-between items-center gap-2">
+                                  <h5 class="font-body-md text-xs font-semibold text-on-surface-variant truncate">{item.title}</h5>
+                                  <span class="material-symbols-outlined text-outline text-xs" aria-hidden="true">lock</span>
+                                </div>
+                                <p class="text-on-surface-variant text-[10px] italic">Page • Prerequisite needed</p>
+                              </div>
+                            </div>
+                          </div>
+                        {:else}
+                          <!-- Active Item -->
+                          <div class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden hover:border-secondary transition-all shadow-sm">
+                            <div class="p-4 flex gap-4">
+                              <div class="w-12 h-12 rounded-lg {item.type === 'Book' ? 'bg-primary-container text-on-primary-container' : 'bg-surface-container-high text-on-surface-variant'} flex items-center justify-center shrink-0">
+                                <span class="material-symbols-outlined text-[24px]" aria-hidden="true">
+                                  {item.type === 'Book' ? 'library_books' : 'description'}
+                                </span>
+                              </div>
+                              <div class="flex-grow min-w-0 space-y-1">
+                                <div class="flex justify-between items-start gap-2">
+                                  <h5 class="font-body-md text-xs font-semibold text-primary truncate leading-tight">{item.title}</h5>
+                                  {#if item.status === 'Completed'}
+                                    <span class="material-symbols-outlined text-secondary text-sm" style="font-variation-settings: 'FILL' 1;" aria-hidden="true">check_circle</span>
+                                  {/if}
+                                </div>
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                  <span class="bg-primary/5 text-primary text-[9px] px-1 py-0.5 rounded font-bold uppercase tracking-wider border border-primary/15">{item.type}</span>
+                                  {#if item.progress}
+                                    <span class="text-on-surface-variant text-[10px] font-semibold">• {item.progress} Complete</span>
+                                  {/if}
+                                  {#if item.status === 'New'}
+                                    <span class="bg-secondary text-on-secondary-fixed text-[8px] uppercase tracking-widest font-bold px-1.5 py-0.5 rounded">New</span>
+                                  {/if}
+                                </div>
+                                {#if item.progress}
+                                  <!-- Progress Bar -->
+                                  <div class="w-full bg-slate-100 h-1.5 rounded-full mt-2 overflow-hidden">
+                                    <div class="bg-secondary h-full rounded-full" style="width: {item.progress}"></div>
+                                  </div>
+                                {/if}
+                              </div>
+                            </div>
+                          </div>
+                        {/if}
+                      {/each}
+                    {/if}
+                  </div>
+                </div>
+              {/each}
+            {/if}
+
+            <!-- TEACHER WORKLOAD VIEW SECTION -->
+            {#if currentRole === 'TEACHER'}
+              <div class="bg-white border-2 border-secondary/35 rounded-xl p-5 md:p-6 space-y-4 shadow-sm animate-fade-in">
+                <div class="flex items-center justify-between border-b border-secondary/20 pb-2">
+                  <div class="flex items-center gap-2">
+                    <span class="material-symbols-outlined text-secondary text-2xl" aria-hidden="true">school</span>
+                    <h4 class="font-title-lg text-sm md:text-base font-bold text-primary">Teacher Workload Frameworks & Guidelines</h4>
+                  </div>
+                  <span class="bg-secondary/15 text-secondary border border-secondary/30 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded">
+                    Official Rospotrebnadzor Standards
+                  </span>
+                </div>
+
+                <p class="text-xs text-on-surface-variant leading-relaxed">
+                  All educational staff must submit their monthly teaching hour allocations and clinical assignments aligned with Rospotrebnadzor standards by the 25th of each month.
+                </p>
+
+                <!-- Guideline framework chapters -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                  <div class="p-3 bg-surface-container-low rounded-lg border border-outline-variant text-xs space-y-1">
+                    <div class="flex items-center gap-1.5 text-primary font-bold">
+                      <span class="material-symbols-outlined text-sm" aria-hidden="true">menu_book</span>
+                      Chapter 1: Hour Allocations
+                    </div>
+                    <p class="text-[11px] text-on-surface-variant">Maximum teaching hours allowed per residency or postgraduate cycle.</p>
+                  </div>
+                  <div class="p-3 bg-surface-container-low rounded-lg border border-outline-variant text-xs space-y-1">
+                    <div class="flex items-center gap-1.5 text-primary font-bold">
+                      <span class="material-symbols-outlined text-sm" aria-hidden="true">clinical_notes</span>
+                      Chapter 2: Clinical Assignments
+                    </div>
+                    <p class="text-[11px] text-on-surface-variant">Hours mapped to clinical diagnostics and epidemiology field inspections.</p>
+                  </div>
+                  <div class="p-3 bg-surface-container-low rounded-lg border border-outline-variant text-xs space-y-1">
+                    <div class="flex items-center gap-1.5 text-primary font-bold">
+                      <span class="material-symbols-outlined text-sm" aria-hidden="true">payments</span>
+                      Chapter 3: Salary Rates
+                    </div>
+                    <p class="text-[11px] text-on-surface-variant">Base hourly compensation indexed by specialty and academic rank.</p>
+                  </div>
+                </div>
+
+                <!-- Interactive Workload Table -->
+                <div class="pt-3">
+                  <h5 class="font-bold text-[10px] text-on-surface-variant uppercase tracking-wider mb-2">My Assigned Framework Workloads</h5>
+                  <div class="border border-outline-variant rounded-xl overflow-hidden bg-slate-50/50">
+                    <table class="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr class="bg-surface-container-low text-on-surface border-b border-outline-variant font-bold">
+                          <th class="p-2 md:p-3">Specialty</th>
+                          <th class="p-2 md:p-3">Teaching Hours</th>
+                          <th class="p-2 md:p-3">Clinical Hours</th>
+                          <th class="p-2 md:p-3">Salary Rate</th>
+                          <th class="p-2 md:p-3">Status</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-outline-variant font-medium">
+                        {#if moodleParsedConfig.workloads}
+                          {#each moodleParsedConfig.workloads as workload}
+                            <tr>
+                              <td class="p-2 md:p-3 font-semibold text-primary">{workload.specialty}</td>
+                              <td class="p-2 md:p-3">{workload.hours} hrs</td>
+                              <td class="p-2 md:p-3">{workload.clinicalHours} hrs</td>
+                              <td class="p-2 md:p-3 text-secondary font-mono">{workload.salaryRate}</td>
+                              <td class="p-2 md:p-3">
+                                <span class="bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
+                                  Approved
+                                </span>
+                              </td>
+                            </tr>
+                          {/each}
+                        {/if}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <!-- Template Download Block -->
+                <div class="p-4 bg-secondary-container/10 border border-secondary-container/30 rounded-xl mt-3 space-y-3">
+                  <h5 class="font-bold text-xs text-secondary uppercase tracking-wider flex items-center gap-1">
+                    <span class="material-symbols-outlined text-sm" aria-hidden="true">download</span>
+                    Required Templates & Submission Packages
+                  </h5>
+                  <p class="text-[11px] text-on-surface-variant">Click to download standard documents required for teaching hour framework submission.</p>
+
+                  <div class="flex flex-wrap gap-2 pt-1">
+                    <a
+                      href="#download-excel"
+                      class="h-9 px-4 bg-white hover:bg-slate-50 border border-outline-variant rounded-lg text-xs font-bold text-primary uppercase flex items-center gap-2 shadow-sm transition-all"
+                      on:click|preventDefault={() => alert("Downloaded: Workload_Template_Framework.xlsx")}
+                    >
+                      <span class="material-symbols-outlined text-sm text-green-600" aria-hidden="true">table_chart</span>
+                      Workload Template (XLSX)
+                    </a>
+                    <a
+                      href="#download-docx"
+                      class="h-9 px-4 bg-white hover:bg-slate-50 border border-outline-variant rounded-lg text-xs font-bold text-primary uppercase flex items-center gap-2 shadow-sm transition-all"
+                      on:click|preventDefault={() => alert("Downloaded: Workload_Submission_Guidelines.docx")}
+                    >
+                      <span class="material-symbols-outlined text-sm text-blue-600" aria-hidden="true">description</span>
+                      Guidelines Guide (DOCX)
+                    </a>
+                  </div>
+                </div>
+              </div>
+            {/if}
+          </div>
+        {:else}
+          <!-- Empty State -->
+          <div class="border-2 border-dashed border-outline-variant rounded-xl p-8 text-center bg-surface-container-low max-w-md mx-auto mt-6 animate-fade-in">
+            <span class="material-symbols-outlined text-outline-variant text-5xl mb-3" aria-hidden="true">construction</span>
+            <h4 class="font-headline-md text-sm md:text-base font-bold text-on-surface">No Structure Scaffolded Yet</h4>
+            <p class="text-xs text-on-surface-variant mt-1.5 leading-relaxed">
+              Execute the configuration script above to automatically deploy and verify the financial reporting block categories, books, and pages.
+            </p>
+          </div>
+        {/if}
+      </section>
+
     <!-- Active Tab: LMS SYNC (PRESERVED) -->
     {:else}
       <!-- Let's check which tab is selected and render appropriately -->
@@ -1671,6 +2095,18 @@
     >
       <span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' {currentTab === 'lms' ? '1' : '0'}; font-weight: {currentTab === 'lms' ? 'bold' : 'normal'};">sync_alt</span>
       <span class="font-label-caps text-[9px] font-semibold mt-1">LMS Sync</span>
+    </button>
+
+    <!-- Moodle Financial Tab -->
+    <button
+      type="button"
+      class="flex flex-col items-center justify-center px-2 py-1 rounded-xl transition-all w-16
+        {currentTab === 'moodle' ? 'text-secondary bg-secondary-container/10 font-bold' : 'text-on-surface-variant hover:text-primary'}"
+      on:click={() => currentTab = 'moodle'}
+      id="tab-button-moodle"
+    >
+      <span class="material-symbols-outlined text-xl" style="font-variation-settings: 'FILL' {currentTab === 'moodle' ? '1' : '0'}; font-weight: {currentTab === 'moodle' ? 'bold' : 'normal'};">dashboard</span>
+      <span class="font-label-caps text-[9px] font-semibold mt-1">Moodle UI</span>
     </button>
 
     <!-- Messenger Tab -->
