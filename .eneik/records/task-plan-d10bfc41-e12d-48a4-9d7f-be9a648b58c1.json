@@ -1,0 +1,154 @@
+{
+  "epics": [
+    {
+      "existingEpicId": null,
+      "title": "Search and List Pagination",
+      "jtbd": "When viewing a long list of search results, I want the results to be paginated, so that system resource consumption and frontend load times are optimized.",
+      "kanoClass": "Must-Be",
+      "cynefinDomain": "complicated",
+      "sixSigmaMetric": "reduce search result payload size and latency by 50%",
+      "tocConstraintRef": "database query execution time for large result sets",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: Support pagination in search queries using page number and page size parameters"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Implement pagination for search endpoint",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing pagination for this epic, I want to add offset and limit parameters to the existing search query, so that the search results can be paginated without returning the entire dataset",
+          "acceptanceCriteria": "Given a search endpoint, When a user provides page size and page number, Then the backend should return the correct subset of results.\nGiven a search query with many results, When the query is executed without parameters, Then default pagination values should be applied.",
+          "leanValue": "valuable",
+          "cynefinDomain": "clear",
+          "tocConstraintRef": "backend memory allocation during large search results serialization",
+          "sixSigmaMetric": "reduce average search endpoint response time by 200ms",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    },
+    {
+      "existingEpicId": "5ad3ba84-0347-4c6d-a45f-90011440fed0",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "increase the number of successfully saved comments per document by 100%",
+      "tocConstraintRef": "database write throughput for document metadata",
+      "sourceIndex": 1,
+      "requirements": [
+        "R1: Persist user comments and update requests to the database and associate them with the relevant document"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Patch existing comments API to persist in the database",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing persistent comments for this epic, I want to update the existing API to save records in the database, so that comments are correctly associated with documents",
+          "acceptanceCriteria": "Given a valid comment submission payload, When the API is called, Then the backend should persist it to the database.\nGiven a persistent comment is saved, When fetching document metadata, Then the comment should be included.",
+          "leanValue": "valuable",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "API latency during comment insertion",
+          "sixSigmaMetric": "reduce failed comment submissions to zero",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    },
+    {
+      "existingEpicId": "efcb87cf-9a40-461c-ac41-31c14874ca64",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "increase the retention rate of user sessions by 15%",
+      "tocConstraintRef": "user profile data retrieval latency on login",
+      "sourceIndex": 1,
+      "requirements": [
+        "R1: Persist user search queries and favorite materials to the database and retrieve them on login"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Patch user profile service to persist search queries and favorites",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing favorites for this epic, I want to add database persistence to the existing user preference handlers, so that user personalization is retained across sessions",
+          "acceptanceCriteria": "Given an authenticated user, When they save a query, Then the database should record the query against their profile.\nGiven a user logs in, When their profile is fetched, Then their saved queries and favorites should be returned.",
+          "leanValue": "valuable",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "database lookup speed for user preferences",
+          "sixSigmaMetric": "reduce preference retrieval time to under 50ms",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    },
+    {
+      "existingEpicId": "74d8207c-a6a1-4b7a-8ff3-13b878a22aed",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "increase successful document exports per day by 50%",
+      "tocConstraintRef": "backend memory allocation during document generation",
+      "sourceIndex": 1,
+      "requirements": [
+        "R1: Dynamically generate and serve formatted PDF and DOCX files containing document content"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Patch document export service to generate PDF and DOCX files",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing document export for this epic, I want to hook up PDF and DOCX generation libraries to the existing export endpoints, so that the document content can be downloaded in the requested formats",
+          "acceptanceCriteria": "Given a structured document, When a PDF export is requested, Then a valid PDF file is returned.\nGiven a structured document, When a DOCX export is requested, Then a valid DOCX file is returned.",
+          "leanValue": "valuable",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "CPU utilization during document conversion",
+          "sixSigmaMetric": "reduce document export generation time to under 2 seconds",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    },
+    {
+      "existingEpicId": null,
+      "title": "Fuzzy Search and Typo Tolerance",
+      "jtbd": "When I enter search queries with typos or spelling errors, I want the system to understand my intent and find relevant documents, so that the search experience is robust and helpful.",
+      "kanoClass": "Attractive",
+      "cynefinDomain": "complicated",
+      "sixSigmaMetric": "decrease zero-result search rate by 30%",
+      "tocConstraintRef": "search index query matching strictness",
+      "sourceIndex": 2,
+      "requirements": [
+        "R1: Employ fuzzy matching or spell correction in search operations to handle typos"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Patch search service to include fuzzy matching capabilities",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing fuzzy search for this epic, I want to update the existing search query builder to use fuzzy matching algorithms, so that typo-tolerant results are returned",
+          "acceptanceCriteria": "Given a search query with a spelling error, When the search is executed, Then relevant documents are returned using fuzzy matching.\nGiven a correct search query, When the search is executed, Then exact matches are prioritized over fuzzy matches.",
+          "leanValue": "valuable",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "search index performance with fuzzy text evaluation",
+          "sixSigmaMetric": "maintain search response time under 300ms while using fuzzy search",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    }
+  ]
+}
