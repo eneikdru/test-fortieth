@@ -5,7 +5,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class TaskService {
@@ -13,9 +15,11 @@ public class TaskService {
     private static final Logger log = LoggerFactory.getLogger(TaskService.class);
 
     private final TaskRepository taskRepository;
+    private final FeatureRepository featureRepository;
 
-    public TaskService(TaskRepository taskRepository) {
+    public TaskService(TaskRepository taskRepository, FeatureRepository featureRepository) {
         this.taskRepository = taskRepository;
+        this.featureRepository = featureRepository;
     }
 
     @Transactional
@@ -24,10 +28,15 @@ public class TaskService {
         List<Task> readyTasks = taskRepository.findByStatus(TaskStatus.READY);
 
         int resolvedCount = 0;
+        Set<Long> affectedFeatureIds = new HashSet<>();
+
         for (Task task : readyTasks) {
             int updated = taskRepository.updateStatusAtomically(task.getId(), TaskStatus.READY, TaskStatus.RESOLVED);
             if (updated > 0) {
                 resolvedCount++;
+                if (task.getFeatureId() != null) {
+                    affectedFeatureIds.add(task.getFeatureId());
+                }
             }
         }
         log.info("Resolved {} out of {} ready tasks.", resolvedCount, readyTasks.size());
@@ -38,15 +47,40 @@ public class TaskService {
             int updated = taskRepository.updateStatusAtomically(task.getId(), TaskStatus.PENDING_REVIEW, TaskStatus.RESOLVED);
             if (updated > 0) {
                 pendingResolvedCount++;
+                if (task.getFeatureId() != null) {
+                    affectedFeatureIds.add(task.getFeatureId());
+                }
             }
         }
         log.info("Resolved {} out of {} pending review tasks.", pendingResolvedCount, pendingReviewTasks.size());
         resolvedCount += pendingResolvedCount;
 
-        double readiness = calculateFalsificationReadiness();
-        log.info("Calculated falsification readiness: {}", readiness);
+        for (Long featureId : affectedFeatureIds) {
+            updateFeatureReadiness(featureId);
+        }
 
-        return new TaskResolutionResult(resolvedCount, readiness);
+        double overallReadiness = calculateFalsificationReadiness();
+        log.info("Calculated falsification readiness: {}", overallReadiness);
+
+        return new TaskResolutionResult(resolvedCount, overallReadiness);
+    }
+
+    private void updateFeatureReadiness(Long featureId) {
+        FeatureEntity feature = featureRepository.findById(featureId).orElse(null);
+        if (feature == null) {
+            return;
+        }
+
+        long totalTasks = taskRepository.countByFeatureId(featureId);
+        if (totalTasks == 0) {
+            return;
+        }
+
+        long resolvedTasks = taskRepository.countByFeatureIdAndStatus(featureId, TaskStatus.RESOLVED);
+        double newRatio = (double) resolvedTasks / totalTasks;
+
+        // Atomically update the readiness ratio (aggregate projection, unconditionally overwrite)
+        featureRepository.updateReadinessAtomically(featureId, newRatio);
     }
 
     private double calculateFalsificationReadiness() {
