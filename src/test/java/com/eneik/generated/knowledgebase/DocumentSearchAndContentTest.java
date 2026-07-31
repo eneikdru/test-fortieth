@@ -241,4 +241,47 @@ public class DocumentSearchAndContentTest {
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].title").value("Регламент аспирантуры"));
     }
+
+    @Test
+    public void testExactMatchesPrioritizedOverFuzzyMatches() throws Exception {
+        // Upload a document containing exact match term "Эпидемиология"
+        MockMultipartFile file1 = new MockMultipartFile(
+                "file",
+                "exact.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Scientific epidemiology studies.".getBytes(StandardCharsets.UTF_8)
+        );
+
+        mockMvc.perform(multipart("/api/v1/integration/documents")
+                        .file(file1)
+                        .param("title", "Эпидемиология")
+                        .param("category", "Материалы")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated());
+
+        // Upload another document containing fuzzy match term "Эпидемология" (typo)
+        MockMultipartFile file2 = new MockMultipartFile(
+                "file",
+                "fuzzy.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Typo epidemiology studies.".getBytes(StandardCharsets.UTF_8)
+        );
+
+        mockMvc.perform(multipart("/api/v1/integration/documents")
+                        .file(file2)
+                        .param("title", "Эпидемология")
+                        .param("category", "Инструкции")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated());
+
+        // Search with exact query "Эпидемиология"
+        // Expected behavior: Exact match "Эпидемиология" has higher priority (score 2) than "Эпидемология" (fuzzy match, score 1)
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("query", "Эпидемиология")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].title").value("Эпидемиология"))
+                .andExpect(jsonPath("$[1].title").value("Эпидемология"));
+    }
 }

@@ -246,6 +246,69 @@ public class KbDocumentController {
         return new ArrayList<>(terms);
     }
 
+    private static class ScoredDocument {
+        private final KbDocument document;
+        private final int score;
+
+        public ScoredDocument(KbDocument document, int score) {
+            this.document = document;
+            this.score = score;
+        }
+
+        public KbDocument getDocument() { return document; }
+        public int getScore() { return score; }
+    }
+
+    private int calculateQueryMatchScore(KbDocument doc, KbDocumentVersion latest, List<String> expandedTerms) {
+        if (expandedTerms.isEmpty()) {
+            return 1; // Default matching score when query is absent
+        }
+
+        String titleLower = doc.getTitle().toLowerCase();
+        String catLower = doc.getCategory() != null ? doc.getCategory().toLowerCase() : "";
+        String contentLower = latest.getIndexedContent() != null ? latest.getIndexedContent().toLowerCase() : "";
+
+        // Check exact/synonym match (Score = 2)
+        for (String term : expandedTerms) {
+            if (titleLower.contains(term) || catLower.contains(term) || contentLower.contains(term)) {
+                return 2;
+            }
+            // Also check tags
+            boolean tagMatchesTerm = doc.getTags().stream().anyMatch(t -> t.toLowerCase().contains(term));
+            if (tagMatchesTerm) {
+                return 2;
+            }
+        }
+
+        // Check fuzzy match (Score = 1)
+        Set<String> docWords = new HashSet<>();
+        docWords.addAll(getWords(doc.getTitle()));
+        if (doc.getCategory() != null) {
+            docWords.addAll(getWords(doc.getCategory()));
+        }
+        if (latest.getIndexedContent() != null) {
+            docWords.addAll(getWords(latest.getIndexedContent()));
+        }
+        for (String tag : doc.getTags()) {
+            docWords.addAll(getWords(tag));
+        }
+
+        Set<String> queryWords = new HashSet<>();
+        for (String term : expandedTerms) {
+            queryWords.addAll(getWords(term));
+        }
+
+        for (String qWord : queryWords) {
+            for (String dWord : docWords) {
+                if (isFuzzyMatch(qWord, dWord)) {
+                    return 1;
+                }
+            }
+        }
+
+        return 0; // No match (Score = 0)
+    }
+
     @GetMapping
     public List<DocumentResponse> searchDocuments(
             @RequestParam(required = false) String query,
@@ -269,12 +332,17 @@ public class KbDocumentController {
                 if (doc.getVersions() == null || doc.getVersions().isEmpty()) {
                     return false;
                 }
-
-                // Get latest version
+                return true;
+            })
+            .map(doc -> {
                 KbDocumentVersion latest = doc.getVersions().stream()
                     .max(Comparator.comparing(KbDocumentVersion::getVersionNumber))
                     .orElse(null);
-
+                return new AbstractMap.SimpleEntry<>(doc, latest);
+            })
+            .filter(entry -> {
+                KbDocument doc = entry.getKey();
+                KbDocumentVersion latest = entry.getValue();
                 if (latest == null) {
                     return false;
                 }
@@ -312,66 +380,17 @@ public class KbDocumentController {
                     }
                 }
 
-                // Filter by full-text search query (expanded terms)
-                if (!expandedTerms.isEmpty()) {
-                    boolean queryMatches = false;
-                    String titleLower = doc.getTitle().toLowerCase();
-                    String catLower = doc.getCategory() != null ? doc.getCategory().toLowerCase() : "";
-                    String contentLower = latest.getIndexedContent() != null ? latest.getIndexedContent().toLowerCase() : "";
-
-                    for (String term : expandedTerms) {
-                        if (titleLower.contains(term) || catLower.contains(term) || contentLower.contains(term)) {
-                            queryMatches = true;
-                            break;
-                        }
-                        // Also check tags
-                        boolean tagMatchesTerm = doc.getTags().stream().anyMatch(t -> t.toLowerCase().contains(term));
-                        if (tagMatchesTerm) {
-                            queryMatches = true;
-                            break;
-                        }
-                    }
-
-                    // If not matched exactly, try fuzzy matching individual words
-                    if (!queryMatches) {
-                        Set<String> docWords = new HashSet<>();
-                        docWords.addAll(getWords(doc.getTitle()));
-                        if (doc.getCategory() != null) {
-                            docWords.addAll(getWords(doc.getCategory()));
-                        }
-                        if (latest.getIndexedContent() != null) {
-                            docWords.addAll(getWords(latest.getIndexedContent()));
-                        }
-                        for (String tag : doc.getTags()) {
-                            docWords.addAll(getWords(tag));
-                        }
-
-                        Set<String> queryWords = new HashSet<>();
-                        for (String term : expandedTerms) {
-                            queryWords.addAll(getWords(term));
-                        }
-
-                        for (String qWord : queryWords) {
-                            for (String dWord : docWords) {
-                                if (isFuzzyMatch(qWord, dWord)) {
-                                    queryMatches = true;
-                                    break;
-                                }
-                            }
-                            if (queryMatches) {
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!queryMatches) {
-                        return false;
-                    }
-                }
-
                 return true;
             })
-            .map(this::mapToResponse)
+            .map(entry -> {
+                KbDocument doc = entry.getKey();
+                KbDocumentVersion latest = entry.getValue();
+                int score = calculateQueryMatchScore(doc, latest, expandedTerms);
+                return new ScoredDocument(doc, score);
+            })
+            .filter(sd -> sd.getScore() > 0)
+            .sorted(Comparator.comparingInt(ScoredDocument::getScore).reversed())
+            .map(sd -> mapToResponse(sd.getDocument()))
             .collect(Collectors.toList());
     }
 
