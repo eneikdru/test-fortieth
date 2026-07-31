@@ -194,4 +194,85 @@ public class KbDocumentSecurityIntegrationTest {
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    public void testValidCredentialsLoginGeneratesJwtToken() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin_jwt_user\",\"password\":\"password\",\"role\":\"ADMINISTRATOR\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.token").exists())
+                .andExpect(jsonPath("$.username").value("admin_jwt_user"))
+                .andExpect(jsonPath("$.role").value("ADMINISTRATOR"));
+    }
+
+    @Test
+    public void testInvalidCredentialsLoginFails() throws Exception {
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin_jwt_user\",\"password\":\"wrong_password\"}"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    public void testJwtAuthAccessAndIgnoringSpoofedHeaders() throws Exception {
+        // 1. Log in to get standard Admin JWT
+        String responseStr = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"admin_jwt_test\",\"password\":\"password\",\"role\":\"ADMINISTRATOR\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String token = responseStr.split("\"token\":\"")[1].split("\"")[0];
+
+        // 2. Perform Admin action (e.g. Upload a document) using JWT and spoofed X-User-Role: STUDENT header
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "jwt_test.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "JWT context".getBytes(StandardCharsets.UTF_8)
+        );
+
+        mockMvc.perform(multipart("/api/v1/integration/documents")
+                        .file(file)
+                        .param("title", "JWT Uploaded Doc")
+                        .param("category", "Norms")
+                        .param("tags", "jwt")
+                        .header("Authorization", "Bearer " + token)
+                        .header("X-User-Role", "STUDENT") // Spoofed student header
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated()); // This succeeds because the system securely authorizes the user as ADMINISTRATOR from the JWT and ignores the spoofed STUDENT header!
+
+        // 3. Log in to get standard Student JWT
+        String studentResponseStr = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"student_jwt_test\",\"password\":\"password\",\"role\":\"STUDENT\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String studentToken = studentResponseStr.split("\"token\":\"")[1].split("\"")[0];
+
+        // 4. Perform Admin action (e.g. Upload a document) using Student JWT and spoofed X-User-Role: ADMINISTRATOR header
+        MockMultipartFile file2 = new MockMultipartFile(
+                "file",
+                "jwt_test_2.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "JWT context 2".getBytes(StandardCharsets.UTF_8)
+        );
+
+        mockMvc.perform(multipart("/api/v1/integration/documents")
+                        .file(file2)
+                        .param("title", "Student Spoofing Upload")
+                        .header("Authorization", "Bearer " + studentToken)
+                        .header("X-User-Role", "ADMINISTRATOR") // Spoofed admin header
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden()); // This is forbidden because the system authorizes them as STUDENT from the JWT and ignores the spoofed ADMINISTRATOR header!
+    }
+
+    @Test
+    public void testInvalidJwtTokenReturns401Unauthorized() throws Exception {
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .header("Authorization", "Bearer invalid-jwt-token"))
+                .andExpect(status().isUnauthorized());
+    }
 }

@@ -1,5 +1,6 @@
 package com.eneik.generated.knowledgebase;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -27,6 +28,12 @@ public class KbDocumentController {
     private final KbDocumentVersionRepository versionRepository;
     private final KbUserRepository userRepository;
     private final KbAuditLogRepository auditLogRepository;
+
+    @Autowired
+    private JwtService jwtService;
+
+    @Autowired(required = false)
+    private jakarta.servlet.http.HttpServletRequest request;
 
     private static final String STORAGE_DIR = "data/storage";
 
@@ -58,12 +65,37 @@ public class KbDocumentController {
     }
 
     private KbUser resolveUser(String usernameHeader, String roleHeader) {
-        String username = (usernameHeader != null && !usernameHeader.trim().isEmpty()) ? usernameHeader.trim() : "system_user";
-        String role = (roleHeader != null && !roleHeader.trim().isEmpty()) ? roleHeader.trim() : "ADMINISTRATOR";
+        String username = null;
+        String role = null;
 
-        return userRepository.findByUsername(username)
+        if (request != null) {
+            String authHeader = request.getHeader("Authorization");
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                JwtService.Claims claims = jwtService.parseToken(token);
+                if (claims == null) {
+                    throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired JWT token");
+                }
+                username = claims.getUsername();
+                role = claims.getRole();
+            }
+        }
+
+        if (username == null) {
+            username = (usernameHeader != null && !usernameHeader.trim().isEmpty()) ? usernameHeader.trim() : "system_user";
+        }
+        if (role == null) {
+            role = (roleHeader != null && !roleHeader.trim().isEmpty()) ? roleHeader.trim() : "ADMINISTRATOR";
+        }
+
+        final String finalUsername = username;
+        final String finalRole = role;
+        return userRepository.findByUsername(finalUsername)
             .map(user -> {
-                if (roleHeader != null && !roleHeader.trim().isEmpty() && !user.getRole().equalsIgnoreCase(roleHeader.trim())) {
+                String authHeader = request != null ? request.getHeader("Authorization") : null;
+                boolean isJwtUsed = authHeader != null && authHeader.startsWith("Bearer ");
+
+                if (!isJwtUsed && roleHeader != null && !roleHeader.trim().isEmpty() && !user.getRole().equalsIgnoreCase(roleHeader.trim())) {
                     user.setRole(roleHeader.trim().toUpperCase());
                     return userRepository.save(user);
                 }
@@ -71,8 +103,8 @@ public class KbDocumentController {
             })
             .orElseGet(() -> {
                 KbUser user = new KbUser();
-                user.setUsername(username);
-                user.setRole(role.toUpperCase());
+                user.setUsername(finalUsername);
+                user.setRole(finalRole.toUpperCase());
                 return userRepository.save(user);
             });
     }
