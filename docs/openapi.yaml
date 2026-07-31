@@ -1,0 +1,466 @@
+openapi: 3.1.0
+info:
+  title: EIOS and LMS Integration API Contract
+  description: >
+    This API contract specifies the shared integration endpoints, request/response shapes,
+    and webhook payloads for LMS metadata, role synchronization, and notification subscriptions
+    between the EIOS Knowledge Base and Moodle LMS systems.
+
+    Roles supported inside EIOS:
+    - ADMINISTRATOR
+    - CONTENT_MANAGER
+    - TEACHER
+    - LEARNER
+  version: 1.0.0
+servers:
+  - url: /api/v1/integration
+    description: Default integration base URL
+
+paths:
+  /lms-metadata:
+    get:
+      summary: Retrieve all synchronized LMS metadata entries
+      description: Returns a list of current metadata entries mapped from the LMS.
+      operationId: getLmsMetadata
+      parameters:
+        - name: externalId
+          in: query
+          description: Filter metadata by external LMS course or resource identifier
+          required: false
+          schema:
+            type: string
+        - name: metadataKey
+          in: query
+          description: Filter metadata by metadata key
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully retrieved LMS metadata list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LmsMetadata'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Bulkupsert LMS metadata mapping
+      description: Create or update metadata mappings from the external LMS.
+      operationId: upsertLmsMetadata
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/LmsMetadataUpsert'
+      responses:
+        '200':
+          description: LMS metadata successfully updated
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LmsMetadata'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /synced-roles:
+    get:
+      summary: Retrieve role mappings
+      description: Returns current external role mappings to internal EIOS identifiers.
+      operationId: getSyncedRoles
+      responses:
+        '200':
+          description: Successfully retrieved role mappings
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SyncedRole'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Create or update role mappings
+      description: Map an external LMS role identifier to an internal EIOS role identifier.
+      operationId: upsertSyncedRole
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SyncedRoleUpsert'
+      responses:
+        '200':
+          description: Role mapping successfully saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncedRole'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /messenger-subscriptions:
+    get:
+      summary: Retrieve all messenger subscriptions
+      description: Returns active notification subscriptions for messenger chats/channels.
+      operationId: getMessengerSubscriptions
+      parameters:
+        - name: userId
+          in: query
+          description: Filter by target EIOS user ID
+          required: false
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Successfully retrieved messenger subscriptions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MessengerSubscription'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      summary: Create or update messenger subscription
+      description: Register or modify notification subscription parameters.
+      operationId: upsertMessengerSubscription
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessengerSubscriptionUpsert'
+      responses:
+        '200':
+          description: Messenger subscription successfully updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessengerSubscription'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+webhooks:
+  lms_updates:
+    post:
+      summary: Webhook for incoming LMS metadata/resource updates
+      description: Invoked by LMS (Moodle) when courses, books, pages, or files are updated.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LmsWebhookPayload'
+      responses:
+        '200':
+          description: Webhook received and processed successfully
+        '400':
+          description: Invalid payload or signature
+        '401':
+          description: Unauthorized webhook delivery
+  eios_sync:
+    post:
+      summary: Webhook for outgoing EIOS role sync trigger
+      description: Invoked by EIOS or sent to the LMS to synchronize role definitions and assignments.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EiosWebhookPayload'
+      responses:
+        '200':
+          description: Webhook acknowledged successfully
+        '400':
+          description: Invalid sync payload
+        '401':
+          description: Unauthorized delivery
+
+components:
+  schemas:
+    LmsMetadata:
+      type: object
+      required:
+        - id
+        - externalId
+        - metadataKey
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Internal database sequence ID
+        externalId:
+          type: string
+          description: Foreign LMS identifier (e.g. course or file identifier)
+        metadataKey:
+          type: string
+          description: Key of the metadata field (e.g. course-code, category-id)
+        metadataValue:
+          type: string
+          description: Value corresponding to the metadata key
+        createdAt:
+          type: string
+          format: date-time
+          description: Entity creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last modification timestamp
+
+    LmsMetadataUpsert:
+      type: object
+      required:
+        - externalId
+        - metadataKey
+      properties:
+        externalId:
+          type: string
+          description: Foreign LMS identifier (e.g. course or file identifier)
+        metadataKey:
+          type: string
+          description: Key of the metadata field
+        metadataValue:
+          type: string
+          description: Value corresponding to the metadata key
+
+    SyncedRole:
+      type: object
+      required:
+        - id
+        - externalRoleName
+        - internalEiosIdentifier
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Unique mapping identifier
+        externalRoleName:
+          type: string
+          description: Unique name of the role inside the LMS (e.g. 'ext_postgrad_lead')
+        internalEiosIdentifier:
+          type: string
+          enum: [ADMINISTRATOR, CONTENT_MANAGER, TEACHER, LEARNER]
+          description: Internal EIOS role designation mapped to the external identifier
+        description:
+          type: string
+          description: Friendly details about this specific role assignment mapping
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of mapping registration
+
+    SyncedRoleUpsert:
+      type: object
+      required:
+        - externalRoleName
+        - internalEiosIdentifier
+      properties:
+        externalRoleName:
+          type: string
+          description: Unique name of the role inside the LMS (e.g. 'ext_postgrad_lead')
+        internalEiosIdentifier:
+          type: string
+          enum: [ADMINISTRATOR, CONTENT_MANAGER, TEACHER, LEARNER]
+          description: Internal EIOS role designation mapped to the external identifier
+        description:
+          type: string
+          description: Description or justification of the role mapping
+
+    MessengerSubscription:
+      type: object
+      required:
+        - id
+        - userId
+        - channelOrChatId
+        - notificationType
+        - isActive
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Subscription record identifier
+        userId:
+          type: string
+          description: Identifies the target user receiving notifications
+        channelOrChatId:
+          type: string
+          description: Address of the channel/group/chat in the messenger service
+        notificationType:
+          type: string
+          description: Type of notifications delivered under this subscription
+        isActive:
+          type: boolean
+          description: Current operational state of this subscription
+        createdAt:
+          type: string
+          format: date-time
+          description: Timestamp of registration
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last modification timestamp
+
+    MessengerSubscriptionUpsert:
+      type: object
+      required:
+        - userId
+        - channelOrChatId
+        - notificationType
+      properties:
+        userId:
+          type: string
+          description: Identifies the target user receiving notifications
+        channelOrChatId:
+          type: string
+          description: Address of the channel/group/chat in the messenger service
+        notificationType:
+          type: string
+          description: Type of notifications delivered under this subscription
+        isActive:
+          type: boolean
+          default: true
+          description: Optional flag to toggle active status
+
+    LmsWebhookPayload:
+      type: object
+      required:
+        - eventType
+        - timestamp
+        - signature
+        - data
+      properties:
+        eventType:
+          type: string
+          enum: [COURSE_UPDATED, FILE_UPLOADED, TERM_DEFINED]
+          description: The type of event that occurred on LMS
+        timestamp:
+          type: integer
+          format: int64
+          description: Event occurrence epoch time in milliseconds
+        signature:
+          type: string
+          description: Cryptographic hash signature to verify authenticity of payload
+        data:
+          type: object
+          properties:
+            externalId:
+              type: string
+              description: External item identifier affected by the change
+            metadata:
+              type: array
+              items:
+                $ref: '#/components/schemas/LmsMetadataUpsert'
+
+    EiosWebhookPayload:
+      type: object
+      required:
+        - eventType
+        - timestamp
+        - data
+      properties:
+        eventType:
+          type: string
+          enum: [ROLE_MAPPING_CHANGED, USER_ROLE_UPDATED]
+          description: Event type triggering the downstream EIOS sync
+        timestamp:
+          type: integer
+          format: int64
+          description: Event occurrence epoch time in milliseconds
+        data:
+          type: object
+          properties:
+            userId:
+              type: string
+              description: Identifier of the user whose assignments were updated
+            roles:
+              type: array
+              items:
+                type: string
+                description: List of current EIOS roles assigned to the user
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorClass
+        - errorCode
+        - message
+        - timestamp
+      properties:
+        errorClass:
+          type: string
+          description: Categorization of the error (e.g. VALIDATION_ERROR, INTEGRATION_ERROR, SECURITY_ERROR)
+        errorCode:
+          type: string
+          description: Precise internal identifier of the specific defect class
+        message:
+          type: string
+          description: Human-readable explanation of the defect context
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO-8601 timestamp representing when the error was registered
+
+  responses:
+    BadRequestError:
+      description: Invalid request payload, query parameters, or formatting
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    UnauthorizedError:
+      description: Security token missing, malformed, or expired
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    ForbiddenError:
+      description: Caller lacks required privilege/scope to invoke the target endpoint
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError:
+      description: An unhandled exception or upstream system failure occurred
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
