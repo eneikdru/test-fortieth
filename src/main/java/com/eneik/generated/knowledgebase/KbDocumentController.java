@@ -469,6 +469,50 @@ public class KbDocumentController {
             .body(content);
     }
 
+    @GetMapping("/{id}/export")
+    public ResponseEntity<byte[]> exportDocument(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "pdf") String format,
+            @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
+
+        KbDocument doc = documentRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+
+        KbUser systemUser = resolveUser(usernameHeader, roleHeader);
+        logAction(systemUser, "EXPORT", "KbDocument", id, doc.getTitle() + " (" + format.toUpperCase() + ")");
+
+        KbDocumentVersion latest = doc.getVersions().stream()
+            .max(Comparator.comparing(KbDocumentVersion::getVersionNumber))
+            .orElse(null);
+
+        byte[] content;
+        String contentType;
+        String filename;
+        try {
+            if ("docx".equalsIgnoreCase(format)) {
+                content = DocumentExportHelper.generateDocx(doc, latest);
+                contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+                filename = "export_" + id + ".docx";
+            } else if ("pdf".equalsIgnoreCase(format)) {
+                content = DocumentExportHelper.generatePdf(doc, latest);
+                contentType = "application/pdf";
+                filename = "export_" + id + ".pdf";
+            } else {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unsupported format: " + format);
+            }
+        } catch (ResponseStatusException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to export document", e);
+        }
+
+        return ResponseEntity.ok()
+            .contentType(MediaType.parseMediaType(contentType))
+            .header("Content-Disposition", "attachment; filename=\"" + filename + "\"")
+            .body(content);
+    }
+
     private String getFileExtension(String filename) {
         int lastDot = filename.lastIndexOf('.');
         if (lastDot == -1) {
