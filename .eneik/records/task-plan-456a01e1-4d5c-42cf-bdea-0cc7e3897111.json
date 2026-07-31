@@ -1,0 +1,34 @@
+{
+  "epics": [
+    {
+      "existingEpicId": "d3276078-ba0a-4b65-b71f-47034f040c20",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "Reduce cycle time of stuck tasks in pending_review from current duration to < 1 day",
+      "tocConstraintRef": "Review phase blocked by stalled tasks",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: Implement automated logic to transition tasks from pending_review to failed after multiple cycles"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Automate pending_review timeout logic",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing the timeout for pending_review for this epic, I want the system to detect and fail stuck tasks, so that the review phase bottleneck is alleviated",
+          "acceptanceCriteria": "Given a task in pending_review for multiple cycles\nWhen the scheduled check runs\nThen the task status is updated to failed\nGiven a task recently moved to pending_review\nWhen the scheduled check runs\nThen the task status remains pending_review",
+          "leanValue": "essential",
+          "cynefinDomain": "clear",
+          "tocConstraintRef": "Task state transition block",
+          "sixSigmaMetric": "Decrease stuck task count in pending_review by 100%",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    }
+  ]
+}
