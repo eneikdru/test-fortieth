@@ -1,0 +1,66 @@
+{
+  "epics": [
+    {
+      "existingEpicId": null,
+      "title": "Pipeline Unblocking and Review Resolution",
+      "jtbd": "When a project manager reviews a stalled pipeline, I want the system to successfully process stuck tasks, so that the workflow continues without manual intervention.",
+      "kanoClass": "Must-Be",
+      "cynefinDomain": "complicated",
+      "sixSigmaMetric": "Reduce the number of tasks stalled in BLOCKED_BY_REVIEW from >0 to 0",
+      "tocConstraintRef": "Review state transition bottleneck",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: Patch the logic flaw preventing task 529e5252-040a-4889-9f61-366ea6e9e089 from exiting pending_review"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Fix pending_review state transition logic",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing the pending_review patch for this epic, I want to fix the state transition bug, so that the pipeline queue resumes processing.",
+          "acceptanceCriteria": "Given task 529e5252-040a-4889-9f61-366ea6e9e089 is in pending_review\nWhen the patched logic is applied\nThen the task transitions out of pending_review successfully",
+          "leanValue": "essential",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "pending_review transition handler logic",
+          "sixSigmaMetric": "Reduce pending_review timeout errors from 100% to 0%",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    },
+    {
+      "existingEpicId": null,
+      "title": "Task Resolution and Falsification Readiness Pipeline Fix",
+      "jtbd": "When an auditor evaluates a project cycle, I want tasks to transition to resolved and update the falsification readiness correctly, so that the project cycle can finish successfully.",
+      "kanoClass": "Must-Be",
+      "cynefinDomain": "complicated",
+      "sixSigmaMetric": "Increase task resolution count from 0 to >0 and falsification readiness from <90% to >90%",
+      "tocConstraintRef": "Task progression and readiness evaluation logic",
+      "sourceIndex": 1,
+      "requirements": [
+        "R1: Patch the logic flaw preventing tasks from transitioning to the resolved state",
+        "R2: Fix the falsification readiness evaluation to properly compute against the >90% threshold"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Patch task resolution and readiness calculation",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing the resolution and readiness fix for this epic, I want to repair the progression logic, so that tasks resolve correctly and readiness meets the threshold.",
+          "acceptanceCriteria": "Given tasks are ready to be resolved and the system evaluates readiness\nWhen the fix runs and task statuses are updated\nThen tasks transition to resolved and falsification readiness computes as >90%",
+          "leanValue": "essential",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "Task status update and readiness computation",
+          "sixSigmaMetric": "Increase the cycle success rate of task resolution updates to 100%",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1",
+            "R2"
+          ]
+        }
+      ]
+    }
+  ]
+}
