@@ -1,0 +1,34 @@
+{
+  "epics": [
+    {
+      "existingEpicId": "d3276078-ba0a-4b65-b71f-47034f040c20",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "Decrease average pipeline stall time from >3 cycles to 0 cycles",
+      "tocConstraintRef": "Pipeline Review Phase Resolution",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: Patch the existing task processing logic to correctly transition tasks out of the 'pending_review' state and unlock the completion of the final two deliverables."
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Fix pending_review task transition processing",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing the pipeline unblocking patch for this epic, I want the task processor to correctly handle the 'pending_review' state transition, so that the workflow continues without manual intervention.",
+          "acceptanceCriteria": "Given a task is in the 'pending_review' state,\nWhen the task is processed by the pipeline,\nThen it should successfully transition to the next valid state.\nGiven the deliverables are blocked at 11/13 readiness,\nWhen the stalled task is unblocked,\nThen the deliverable readiness should advance accordingly.",
+          "leanValue": "essential",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "Task pending_review transition handler",
+          "sixSigmaMetric": "Reduce the number of tasks stalled in pending_review across consecutive cycles from 1 to 0",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    }
+  ]
+}
