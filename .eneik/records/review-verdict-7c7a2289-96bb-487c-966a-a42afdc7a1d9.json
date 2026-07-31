@@ -1,0 +1,13 @@
+{
+  "verdicts": [
+    {
+      "sourceIndex": 0,
+      "verdict": "approve",
+      "criticalReason": "",
+      "concerns": [
+        "The PDF generator uses local filesystem paths to locate TTF fonts ('/usr/share/fonts/truetype/...'). On systems or containers without these fonts pre-installed, OpenPDF falls back to Helvetica (CP1252), which will result in missing or broken Cyrillic character rendering.",
+        "Generating DOCX format through manual XML string construction and ZIP compression is lightweight but fragile. Consider using standard libraries such as Apache POI or docx4j for more robust document generation in the future."
+      ]
+    }
+  ]
+}
