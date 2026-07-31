@@ -1,0 +1,34 @@
+{
+  "epics": [
+    {
+      "existingEpicId": "c0ebc3fb-e9c3-4809-84cd-e0b6d5007703",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "Increase feature readiness progression rate from stalled at 33% to 100% accuracy",
+      "tocConstraintRef": "Feature readiness pipeline calculation",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: Patch the existing task resolution pipeline to correctly update the deliverable readiness ratio"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Patch task resolution to update feature readiness",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing the readiness calculation fix for this epic, I want to properly update the deliverable readiness ratio upon task resolution, so that the project cycle stagnation is resolved",
+          "acceptanceCriteria": "Given a feature with stalled deliverable readiness ratio at 1/3\nWhen tasks are actively resolved in the pipeline\nThen the feature readiness ratio increases appropriately",
+          "leanValue": "essential",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "Backend readiness ratio calculation logic",
+          "sixSigmaMetric": "Reduce readiness ratio update failures from 100% to 0%",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    }
+  ]
+}
