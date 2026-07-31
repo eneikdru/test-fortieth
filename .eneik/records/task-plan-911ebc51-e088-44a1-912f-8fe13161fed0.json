@@ -1,0 +1,34 @@
+{
+  "epics": [
+    {
+      "existingEpicId": "d3276078-ba0a-4b65-b71f-47034f040c20",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "increase feature readiness from 1/3 to 3/3",
+      "tocConstraintRef": "pending-review-bottleneck",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: Process tasks 0cb354e9 and d9f35f4b that have been stuck in pending_review for over 4 hours"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Patch pipeline unblocker for stuck pending_review tasks",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing the pipeline fix for this epic, I want to process the stuck tasks in pending_review, so that the workflow continues without manual intervention",
+          "acceptanceCriteria": "Given tasks 0cb354e9 and d9f35f4b are stuck in pending_review for over 4 hours\nWhen the system evaluates pipeline readiness\nThen the tasks are safely unblocked and transitioned",
+          "leanValue": "essential",
+          "cynefinDomain": "clear",
+          "tocConstraintRef": "pending-review-transition",
+          "sixSigmaMetric": "reduce pending_review duration from >4h to <1h",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    }
+  ]
+}
