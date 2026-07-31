@@ -39,6 +39,7 @@ public class KbUserPreferenceController {
     private KbUser resolveUser(String usernameHeader, String roleHeader) {
         String username = null;
         String role = null;
+        boolean hasValidJwt = false;
 
         if (request != null) {
             String authHeader = request.getHeader("Authorization");
@@ -50,7 +51,21 @@ public class KbUserPreferenceController {
                 }
                 username = claims.getUsername();
                 role = claims.getRole();
+                hasValidJwt = true;
             }
+        }
+
+        boolean hasSpoofingHeader = false;
+        if (request != null) {
+            String xRole = request.getHeader("X-User-Role");
+            String xName = request.getHeader("X-User-Name");
+            if ((xRole != null && !xRole.trim().isEmpty()) || (xName != null && !xName.trim().isEmpty())) {
+                hasSpoofingHeader = true;
+            }
+        }
+
+        if (hasSpoofingHeader && !hasValidJwt) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Unauthorized: Role spoofing detected or valid JWT missing");
         }
 
         if (username == null) {

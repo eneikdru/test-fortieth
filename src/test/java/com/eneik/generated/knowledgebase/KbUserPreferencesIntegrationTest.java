@@ -44,6 +44,15 @@ public class KbUserPreferencesIntegrationTest {
     private Long documentId1;
     private Long documentId2;
 
+    private String getJwtToken(String username, String role) throws Exception {
+        String responseStr = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"" + username + "\",\"password\":\"password\",\"role\":\"" + role + "\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return responseStr.split("\"token\":\"")[1].split("\"")[0];
+    }
+
     @BeforeEach
     public void setup() throws Exception {
         userFavoriteRepository.deleteAll();
@@ -52,11 +61,7 @@ public class KbUserPreferencesIntegrationTest {
         documentRepository.deleteAll();
         userRepository.deleteAll();
 
-        // Create an admin user to upload documents
-        KbUser admin = new KbUser();
-        admin.setUsername("admin_uploader");
-        admin.setRole("ADMINISTRATOR");
-        admin = userRepository.save(admin);
+        String token = getJwtToken("admin_uploader", "ADMINISTRATOR");
 
         // Upload some documents to use in favorites tests
         MockMultipartFile file1 = new MockMultipartFile(
@@ -70,8 +75,7 @@ public class KbUserPreferencesIntegrationTest {
                         .file(file1)
                         .param("title", "Pediatrics Guidelines")
                         .param("category", "Pediatrics")
-                        .header("X-User-Name", "admin_uploader")
-                        .header("X-User-Role", "ADMINISTRATOR")
+                        .header("Authorization", "Bearer " + token)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
@@ -89,8 +93,7 @@ public class KbUserPreferencesIntegrationTest {
                         .file(file2)
                         .param("title", "Cardiology Guidelines")
                         .param("category", "Cardiology")
-                        .header("X-User-Name", "admin_uploader")
-                        .header("X-User-Role", "ADMINISTRATOR")
+                        .header("Authorization", "Bearer " + token)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
@@ -100,11 +103,13 @@ public class KbUserPreferencesIntegrationTest {
 
     @Test
     public void testFavoritesWorkflows() throws Exception {
+        String alphaToken = getJwtToken("user_alpha", "STUDENT");
+        String betaToken = getJwtToken("user_beta", "STUDENT");
+
         // 1. Add favorite for user_alpha
         mockMvc.perform(post("/api/v1/integration/preferences/favorites")
                         .param("documentId", documentId1.toString())
-                        .header("X-User-Name", "user_alpha")
-                        .header("X-User-Role", "STUDENT"))
+                        .header("Authorization", "Bearer " + alphaToken))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.documentId", is(documentId1.intValue())))
                 .andExpect(jsonPath("$.title", is("Pediatrics Guidelines")))
@@ -113,60 +118,55 @@ public class KbUserPreferencesIntegrationTest {
         // 2. Add same favorite for user_alpha (Idempotency)
         mockMvc.perform(post("/api/v1/integration/preferences/favorites")
                         .param("documentId", documentId1.toString())
-                        .header("X-User-Name", "user_alpha")
-                        .header("X-User-Role", "STUDENT"))
+                        .header("Authorization", "Bearer " + alphaToken))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.documentId", is(documentId1.intValue())));
 
         // 3. Get favorites for user_alpha (should have 1 item)
         mockMvc.perform(get("/api/v1/integration/preferences/favorites")
-                        .header("X-User-Name", "user_alpha")
-                        .header("X-User-Role", "STUDENT"))
+                        .header("Authorization", "Bearer " + alphaToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].documentId", is(documentId1.intValue())));
 
         // 4. Get favorites for user_beta (should be empty - Isolation)
         mockMvc.perform(get("/api/v1/integration/preferences/favorites")
-                        .header("X-User-Name", "user_beta")
-                        .header("X-User-Role", "STUDENT"))
+                        .header("Authorization", "Bearer " + betaToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
 
         // 5. Add favorite for a non-existent document
         mockMvc.perform(post("/api/v1/integration/preferences/favorites")
                         .param("documentId", "999999")
-                        .header("X-User-Name", "user_alpha")
-                        .header("X-User-Role", "STUDENT"))
+                        .header("Authorization", "Bearer " + alphaToken))
                 .andExpect(status().isNotFound());
 
         // 6. Delete favorite for user_alpha
         mockMvc.perform(delete("/api/v1/integration/preferences/favorites/{documentId}", documentId1)
-                        .header("X-User-Name", "user_alpha")
-                        .header("X-User-Role", "STUDENT"))
+                        .header("Authorization", "Bearer " + alphaToken))
                 .andExpect(status().isNoContent());
 
         // 7. Verify favorites list for user_alpha is empty
         mockMvc.perform(get("/api/v1/integration/preferences/favorites")
-                        .header("X-User-Name", "user_alpha")
-                        .header("X-User-Role", "STUDENT"))
+                        .header("Authorization", "Bearer " + alphaToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
 
         // 8. Delete non-existent document favorite
         mockMvc.perform(delete("/api/v1/integration/preferences/favorites/{documentId}", 999999L)
-                        .header("X-User-Name", "user_alpha")
-                        .header("X-User-Role", "STUDENT"))
+                        .header("Authorization", "Bearer " + alphaToken))
                 .andExpect(status().isNotFound());
     }
 
     @Test
     public void testSavedQueriesWorkflows() throws Exception {
+        String alphaToken = getJwtToken("user_alpha", "ORDINATOR");
+        String betaToken = getJwtToken("user_beta", "ORDINATOR");
+
         // 1. Save query for user_alpha
         String qStr = mockMvc.perform(post("/api/v1/integration/preferences/saved-queries")
                         .param("query", "pediatric residency protocols")
-                        .header("X-User-Name", "user_alpha")
-                        .header("X-User-Role", "ORDINATOR"))
+                        .header("Authorization", "Bearer " + alphaToken))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id", notNullValue()))
                 .andExpect(jsonPath("$.queryText", is("pediatric residency protocols")))
@@ -178,79 +178,71 @@ public class KbUserPreferencesIntegrationTest {
         // 2. Save same query for user_alpha (Idempotency)
         mockMvc.perform(post("/api/v1/integration/preferences/saved-queries")
                         .param("query", "pediatric residency protocols")
-                        .header("X-User-Name", "user_alpha")
-                        .header("X-User-Role", "ORDINATOR"))
+                        .header("Authorization", "Bearer " + alphaToken))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id", is(queryId.intValue())));
 
         // 3. Save empty query (Bad Request)
         mockMvc.perform(post("/api/v1/integration/preferences/saved-queries")
                         .param("query", "   ")
-                        .header("X-User-Name", "user_alpha")
-                        .header("X-User-Role", "ORDINATOR"))
+                        .header("Authorization", "Bearer " + alphaToken))
                 .andExpect(status().isBadRequest());
 
         // 4. Get saved queries for user_alpha (should have 1 item)
         mockMvc.perform(get("/api/v1/integration/preferences/saved-queries")
-                        .header("X-User-Name", "user_alpha")
-                        .header("X-User-Role", "ORDINATOR"))
+                        .header("Authorization", "Bearer " + alphaToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].queryText", is("pediatric residency protocols")));
 
         // 5. Get saved queries for user_beta (should be empty - Isolation)
         mockMvc.perform(get("/api/v1/integration/preferences/saved-queries")
-                        .header("X-User-Name", "user_beta")
-                        .header("X-User-Role", "ORDINATOR"))
+                        .header("Authorization", "Bearer " + betaToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
 
         // 6. Delete user_alpha's query using user_beta's context (Forbidden)
         mockMvc.perform(delete("/api/v1/integration/preferences/saved-queries/{id}", queryId)
-                        .header("X-User-Name", "user_beta")
-                        .header("X-User-Role", "ORDINATOR"))
+                        .header("Authorization", "Bearer " + betaToken))
                 .andExpect(status().isForbidden());
 
         // 7. Delete non-existent query (NotFound)
         mockMvc.perform(delete("/api/v1/integration/preferences/saved-queries/{id}", 999999L)
-                        .header("X-User-Name", "user_alpha")
-                        .header("X-User-Role", "ORDINATOR"))
+                        .header("Authorization", "Bearer " + alphaToken))
                 .andExpect(status().isNotFound());
 
         // 8. Delete user_alpha's query successfully
         mockMvc.perform(delete("/api/v1/integration/preferences/saved-queries/{id}", queryId)
-                        .header("X-User-Name", "user_alpha")
-                        .header("X-User-Role", "ORDINATOR"))
+                        .header("Authorization", "Bearer " + alphaToken))
                 .andExpect(status().isNoContent());
 
         // 9. Verify saved queries list for user_alpha is empty
         mockMvc.perform(get("/api/v1/integration/preferences/saved-queries")
-                        .header("X-User-Name", "user_alpha")
-                        .header("X-User-Role", "ORDINATOR"))
+                        .header("Authorization", "Bearer " + alphaToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
     }
 
     @Test
     public void testUserProfileEndpointWithHeadersAndIsolation() throws Exception {
+        String profile1Token = getJwtToken("user_profile_1", "STUDENT");
+        String profile2Token = getJwtToken("user_profile_2", "STUDENT");
+
         // 1. Create a favorite document for user_profile_1
         mockMvc.perform(post("/api/v1/integration/preferences/favorites")
                         .param("documentId", documentId1.toString())
-                        .header("X-User-Name", "user_profile_1")
-                        .header("X-User-Role", "STUDENT"))
+                        .header("Authorization", "Bearer " + profile1Token))
                 .andExpect(status().isCreated());
 
         // 2. Save a query for user_profile_1
         mockMvc.perform(post("/api/v1/integration/preferences/saved-queries")
                         .param("query", "pediatric immunology")
-                        .header("X-User-Name", "user_profile_1")
-                        .header("X-User-Role", "STUDENT"))
+                        .header("Authorization", "Bearer " + profile1Token))
                 .andExpect(status().isCreated());
 
-        // 3. Fetch user_profile_1's profile using headers and verify details
+        // 3. Fetch user_profile_1's profile using JWT and verify details
         mockMvc.perform(get("/api/v1/integration/preferences/profile")
-                        .header("X-User-Name", "user_profile_1")
-                        .header("X-User-Role", "STUDENT"))
+                        .header("Authorization", "Bearer " + profile1Token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username", is("user_profile_1")))
                 .andExpect(jsonPath("$.role", is("STUDENT")))
@@ -262,8 +254,7 @@ public class KbUserPreferencesIntegrationTest {
 
         // 4. Fetch user_profile_2's profile and check isolation (should be empty/no favorites or queries)
         mockMvc.perform(get("/api/v1/integration/preferences/profile")
-                        .header("X-User-Name", "user_profile_2")
-                        .header("X-User-Role", "STUDENT"))
+                        .header("Authorization", "Bearer " + profile2Token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.username", is("user_profile_2")))
                 .andExpect(jsonPath("$.role", is("STUDENT")))

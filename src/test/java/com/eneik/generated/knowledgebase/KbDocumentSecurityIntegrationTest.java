@@ -40,6 +40,15 @@ public class KbDocumentSecurityIntegrationTest {
 
     private Long sampleDocId;
 
+    private String getJwtToken(String username, String role) throws Exception {
+        String responseStr = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"" + username + "\",\"password\":\"password\",\"role\":\"" + role + "\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return responseStr.split("\"token\":\"")[1].split("\"")[0];
+    }
+
     @BeforeEach
     public void setup() throws Exception {
         // Clear database in correct order
@@ -47,6 +56,8 @@ public class KbDocumentSecurityIntegrationTest {
         versionRepository.deleteAll();
         documentRepository.deleteAll();
         userRepository.deleteAll();
+
+        String adminToken = getJwtToken("admin_user", "ADMINISTRATOR");
 
         // Upload a sample document using administrator context
         MockMultipartFile file = new MockMultipartFile(
@@ -61,8 +72,7 @@ public class KbDocumentSecurityIntegrationTest {
                         .param("title", "Sample Standard Document")
                         .param("category", "Norms")
                         .param("tags", "test")
-                        .header("X-User-Name", "admin_user")
-                        .header("X-User-Role", "ADMINISTRATOR")
+                        .header("Authorization", "Bearer " + adminToken)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
@@ -80,10 +90,11 @@ public class KbDocumentSecurityIntegrationTest {
 
     @Test
     public void testStudentDeleteDocumentReturns403Forbidden() throws Exception {
+        String studentToken = getJwtToken("student_john", "STUDENT");
+
         // Attempt to delete as student
         mockMvc.perform(delete("/api/v1/integration/documents/{id}", sampleDocId)
-                        .header("X-User-Name", "student_john")
-                        .header("X-User-Role", "STUDENT"))
+                        .header("Authorization", "Bearer " + studentToken))
                 .andExpect(status().isForbidden());
 
         // Verify document was NOT deleted from database
@@ -98,6 +109,8 @@ public class KbDocumentSecurityIntegrationTest {
 
     @Test
     public void testStudentUpdateDocumentReturns403Forbidden() throws Exception {
+        String studentToken = getJwtToken("student_john", "STUDENT");
+
         // Attempt to update as student
         MockMultipartFile updatedFile = new MockMultipartFile(
                 "file",
@@ -109,8 +122,7 @@ public class KbDocumentSecurityIntegrationTest {
         mockMvc.perform(multipart("/api/v1/integration/documents/{id}", sampleDocId)
                         .file(updatedFile)
                         .param("title", "Unauthorized Edit Title")
-                        .header("X-User-Name", "student_john")
-                        .header("X-User-Role", "STUDENT")
+                        .header("Authorization", "Bearer " + studentToken)
                         .with(request -> { request.setMethod("PUT"); return request; }))
                 .andExpect(status().isForbidden());
 
@@ -121,6 +133,8 @@ public class KbDocumentSecurityIntegrationTest {
 
     @Test
     public void testStudentUploadDocumentReturns403Forbidden() throws Exception {
+        String studentToken = getJwtToken("student_john", "STUDENT");
+
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "secret.txt",
@@ -131,14 +145,16 @@ public class KbDocumentSecurityIntegrationTest {
         mockMvc.perform(multipart("/api/v1/integration/documents")
                         .file(file)
                         .param("title", "Student Upload Title")
-                        .header("X-User-Name", "student_john")
-                        .header("X-User-Role", "STUDENT")
+                        .header("Authorization", "Bearer " + studentToken)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
     }
 
     @Test
     public void testAdminEditAndDeleteSucceedsAndLogs() throws Exception {
+        String editorToken = getJwtToken("admin_editor", "ADMINISTRATOR");
+        String destroyerToken = getJwtToken("admin_destroyer", "ADMINISTRATOR");
+
         // 1. Update document as Admin
         MockMultipartFile updatedFile = new MockMultipartFile(
                 "file",
@@ -150,8 +166,7 @@ public class KbDocumentSecurityIntegrationTest {
         mockMvc.perform(multipart("/api/v1/integration/documents/{id}", sampleDocId)
                         .file(updatedFile)
                         .param("title", "Authorized Edit Title")
-                        .header("X-User-Name", "admin_editor")
-                        .header("X-User-Role", "ADMINISTRATOR")
+                        .header("Authorization", "Bearer " + editorToken)
                         .with(request -> { request.setMethod("PUT"); return request; }))
                 .andExpect(status().isOk());
 
@@ -169,8 +184,7 @@ public class KbDocumentSecurityIntegrationTest {
 
         // 2. Delete document as Admin
         mockMvc.perform(delete("/api/v1/integration/documents/{id}", sampleDocId)
-                        .header("X-User-Name", "admin_destroyer")
-                        .header("X-User-Role", "ADMINISTRATOR"))
+                        .header("Authorization", "Bearer " + destroyerToken))
                 .andExpect(status().isNoContent());
 
         // Verify deleted from DB
@@ -187,10 +201,11 @@ public class KbDocumentSecurityIntegrationTest {
 
     @Test
     public void testInvalidRequestTriggers400BadRequestError() throws Exception {
+        String adminToken = getJwtToken("admin_user", "ADMINISTRATOR");
+
         // Attempt upload without file or title
         mockMvc.perform(multipart("/api/v1/integration/documents")
-                        .header("X-User-Name", "admin_user")
-                        .header("X-User-Role", "ADMINISTRATOR")
+                        .header("Authorization", "Bearer " + adminToken)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest());
     }
@@ -273,6 +288,14 @@ public class KbDocumentSecurityIntegrationTest {
     public void testInvalidJwtTokenReturns401Unauthorized() throws Exception {
         mockMvc.perform(get("/api/v1/integration/documents")
                         .header("Authorization", "Bearer invalid-jwt-token"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    public void testLacksValidJwtButProvidesRoleSpoofingHeaderIsRejected() throws Exception {
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .header("X-User-Role", "ADMINISTRATOR")
+                        .header("X-User-Name", "some_user"))
                 .andExpect(status().isUnauthorized());
     }
 }
