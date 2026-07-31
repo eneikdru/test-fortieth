@@ -1,0 +1,10 @@
+{
+  "verdicts": [
+    {
+      "sourceIndex": 0,
+      "verdict": "block",
+      "criticalReason": "The PR introduces a duplicate method 'exportDocument' and duplicate endpoint mapping '@GetMapping(\"/{id}/export\")' in 'KbDocumentController.java' (which already exists in the current codebase). This causes a critical Java compilation error ('method is already defined in class KbDocumentController') and Spring boot-up endpoint collision error ('Ambiguous mapping').",
+      "concerns": []
+    }
+  ]
+}
