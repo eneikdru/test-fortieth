@@ -185,6 +185,89 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
+  /tasks:
+    get:
+      summary: Retrieve all tasks
+      description: Returns a list of current tasks in the system.
+      operationId: getTasks
+      responses:
+        '200':
+          description: Successfully retrieved tasks list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tasks/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    get:
+      summary: Get a task by ID
+      operationId: getTaskById
+      responses:
+        '200':
+          description: Task details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Task not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /tasks/{id}/transition:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+    post:
+      summary: Transition a task state
+      description: Transitions a task state atomically with a conditional/optimistic concurrency check.
+      operationId: transitionTask
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - expectedStatus
+                - newStatus
+              properties:
+                expectedStatus:
+                  type: string
+                newStatus:
+                  type: string
+      responses:
+        '200':
+          description: Task successfully transitioned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Task'
+        '400':
+          $ref: '#/components/responses/BadRequestError'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        '404':
+          description: Task not found
+        '500':
+          $ref: '#/components/responses/InternalServerError'
 
   /documents:
     get:
@@ -423,6 +506,31 @@ components:
           format: date-time
           description: Last modification timestamp
 
+
+    Task:
+      type: object
+      required:
+        - id
+        - title
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+          description: Unique string identifier for the task (UUID)
+        title:
+          type: string
+          description: Task title
+        status:
+          type: string
+          description: Task status (e.g. pending_review, resolved)
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
     Document:
       type: object
