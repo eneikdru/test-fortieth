@@ -1,0 +1,36 @@
+{
+  "epics": [
+    {
+      "existingEpicId": "c295715a-300c-4a5b-a440-bdb5cbe580da",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "Reduce unauthorized role spoofing access from baseline to 0%",
+      "tocConstraintRef": "Authorization Gateway",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: Generate a secure session token (JWT) upon successful login.",
+        "R2: Validate the JWT on all subsequent requests, rejecting header-based role spoofing."
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Patch Authentication to use JWT instead of headers",
+          "roleTag": "BARCAN-TAG-07",
+          "jtbd": "When implementing the JWT patch for this epic, I want to enforce token generation and validation, so that unauthorized users cannot spoof roles.",
+          "acceptanceCriteria": "Given a user on the login screen, When they provide valid credentials, Then a secure session token (JWT) is generated and returned.\nGiven an incoming request, When it lacks a valid JWT but provides a role spoofing header, Then the request is rejected as unauthorized.",
+          "leanValue": "essential",
+          "cynefinDomain": "clear",
+          "tocConstraintRef": "Security Filter Chain",
+          "sixSigmaMetric": "Decrease rate of successful unauthorized requests via header spoofing to 0",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1",
+            "R2"
+          ]
+        }
+      ]
+    }
+  ]
+}
