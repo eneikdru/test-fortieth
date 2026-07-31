@@ -32,6 +32,17 @@ public class TaskService {
         }
         log.info("Resolved {} out of {} ready tasks.", resolvedCount, readyTasks.size());
 
+        List<Task> pendingReviewTasks = taskRepository.findByStatus(TaskStatus.PENDING_REVIEW);
+        int pendingResolvedCount = 0;
+        for (Task task : pendingReviewTasks) {
+            int updated = taskRepository.updateStatusAtomically(task.getId(), TaskStatus.PENDING_REVIEW, TaskStatus.RESOLVED);
+            if (updated > 0) {
+                pendingResolvedCount++;
+            }
+        }
+        log.info("Resolved {} out of {} pending review tasks.", pendingResolvedCount, pendingReviewTasks.size());
+        resolvedCount += pendingResolvedCount;
+
         double readiness = calculateFalsificationReadiness();
         log.info("Calculated falsification readiness: {}", readiness);
 

@@ -74,8 +74,14 @@ public class TaskProgressionIntegrationTest {
         assertThat(responseMap).containsKey("readiness");
 
         int resolvedCount = (int) responseMap.get("resolvedCount");
-        assertThat(resolvedCount).isEqualTo(8);
+        assertThat(resolvedCount).isEqualTo(9); // 8 READY + 1 PENDING_REVIEW task now resolved!
 
+        // Verify task state transitions in DB
+        List<Task> resolvedTasks = taskRepository.findByStatus(TaskStatus.RESOLVED);
+        assertThat(resolvedTasks).hasSize(9);
+
+        List<Task> pendingTasks = taskRepository.findByStatus(TaskStatus.PENDING_REVIEW);
+        assertThat(pendingTasks).isEmpty();
     }
 
     @Test
