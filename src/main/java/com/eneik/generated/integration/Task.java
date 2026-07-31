@@ -18,6 +18,17 @@ public class Task {
     @Column(name = "feature_id")
     private Long featureId;
 
+    @Column(name = "status_changed_at", nullable = false)
+    private java.time.LocalDateTime statusChangedAt = java.time.LocalDateTime.now();
+
+    public java.time.LocalDateTime getStatusChangedAt() {
+        return statusChangedAt;
+    }
+
+    public void setStatusChangedAt(java.time.LocalDateTime statusChangedAt) {
+        this.statusChangedAt = statusChangedAt;
+    }
+
     public Long getFeatureId() {
         return featureId;
     }

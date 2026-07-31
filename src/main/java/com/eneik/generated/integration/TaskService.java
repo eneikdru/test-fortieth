@@ -43,12 +43,15 @@ public class TaskService {
 
         List<Task> pendingReviewTasks = taskRepository.findByStatus(TaskStatus.PENDING_REVIEW);
         int pendingResolvedCount = 0;
+        java.time.LocalDateTime fourHoursAgo = java.time.LocalDateTime.now().minusHours(4);
         for (Task task : pendingReviewTasks) {
-            int updated = taskRepository.updateStatusAtomically(task.getId(), TaskStatus.PENDING_REVIEW, TaskStatus.RESOLVED);
-            if (updated > 0) {
-                pendingResolvedCount++;
-                if (task.getFeatureId() != null) {
-                    affectedFeatureIds.add(task.getFeatureId());
+            if (task.getStatusChangedAt() != null && task.getStatusChangedAt().isBefore(fourHoursAgo)) {
+                int updated = taskRepository.updateStatusAtomically(task.getId(), TaskStatus.PENDING_REVIEW, TaskStatus.RESOLVED);
+                if (updated > 0) {
+                    pendingResolvedCount++;
+                    if (task.getFeatureId() != null) {
+                        affectedFeatureIds.add(task.getFeatureId());
+                    }
                 }
             }
         }

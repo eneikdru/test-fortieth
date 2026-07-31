@@ -11,8 +11,8 @@ import java.util.List;
 @Repository
 public interface TaskRepository extends JpaRepository<Task, Long> {
 
-    @Modifying
-    @Query("UPDATE Task t SET t.status = :newStatus WHERE t.id = :id AND t.status = :oldStatus")
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Task t SET t.status = :newStatus, t.statusChangedAt = CURRENT_TIMESTAMP WHERE t.id = :id AND t.status = :oldStatus")
     int updateStatusAtomically(@Param("id") Long id, @Param("oldStatus") TaskStatus oldStatus, @Param("newStatus") TaskStatus newStatus);
 
     List<Task> findByStatus(TaskStatus status);

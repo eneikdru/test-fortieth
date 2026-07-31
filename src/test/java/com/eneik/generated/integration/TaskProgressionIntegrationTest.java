@@ -60,6 +60,7 @@ public class TaskProgressionIntegrationTest {
         Task pending = new Task();
         pending.setTitle("Pending Task");
         pending.setStatus(TaskStatus.PENDING_REVIEW);
+        pending.setStatusChangedAt(java.time.LocalDateTime.now().minusHours(5));
         pending.setFeatureId(feature.getId());
         taskRepository.save(pending);
 
@@ -99,6 +100,55 @@ public class TaskProgressionIntegrationTest {
         FeatureEntity updatedFeature = featureRepository.findById(feature.getId()).get();
         // 9 resolved out of 10 tasks = 0.9
         assertThat(updatedFeature.getReadinessRatio()).isEqualTo(0.9);
+    }
+
+    @Test
+    public void testNewPendingReviewTaskNotResolved() throws Exception {
+        // Arrange
+        FeatureEntity feature = new FeatureEntity();
+        feature.setTitle("Test Feature 2");
+        feature.setReadinessRatio(0.0);
+        featureRepository.save(feature);
+
+        // Setup 2 tasks: 1 READY, 1 PENDING_REVIEW (created just now)
+        Task ready = new Task();
+        ready.setTitle("Ready Task");
+        ready.setStatus(TaskStatus.READY);
+        ready.setFeatureId(feature.getId());
+        taskRepository.save(ready);
+
+        Task pending = new Task();
+        pending.setTitle("New Pending Task");
+        pending.setStatus(TaskStatus.PENDING_REVIEW);
+        pending.setStatusChangedAt(java.time.LocalDateTime.now()); // brand new
+        pending.setFeatureId(feature.getId());
+        taskRepository.save(pending);
+
+        // Act
+        MvcResult mvcResult = mockMvc.perform(post("/api/v1/tasks/resolve"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Assert API Response
+        String jsonResponse = mvcResult.getResponse().getContentAsString();
+        Map<String, Object> responseMap = objectMapper.readValue(jsonResponse, Map.class);
+
+        int resolvedCount = (int) responseMap.get("resolvedCount");
+        // Only the READY task should be resolved, the brand new PENDING_REVIEW task should NOT be resolved!
+        assertThat(resolvedCount).isEqualTo(1);
+
+        // Verify task state in DB
+        List<Task> resolvedTasks = taskRepository.findByStatus(TaskStatus.RESOLVED);
+        assertThat(resolvedTasks).hasSize(1);
+        assertThat(resolvedTasks.get(0).getTitle()).isEqualTo("Ready Task");
+
+        List<Task> pendingTasks = taskRepository.findByStatus(TaskStatus.PENDING_REVIEW);
+        assertThat(pendingTasks).hasSize(1);
+        assertThat(pendingTasks.get(0).getTitle()).isEqualTo("New Pending Task");
+
+        // Verify feature readiness in DB: 1 resolved out of 2 total = 0.5
+        FeatureEntity updatedFeature = featureRepository.findById(feature.getId()).get();
+        assertThat(updatedFeature.getReadinessRatio()).isEqualTo(0.5);
     }
 
     @Test

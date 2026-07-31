@@ -1,0 +1,2 @@
+-- V20260731204304014__add_status_changed_at_to_tasks.sql
+ALTER TABLE tasks ADD COLUMN status_changed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
