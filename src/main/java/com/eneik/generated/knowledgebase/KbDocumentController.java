@@ -114,7 +114,12 @@ public class KbDocumentController {
                 String authHeader = request != null ? request.getHeader("Authorization") : null;
                 boolean isJwtUsed = authHeader != null && authHeader.startsWith("Bearer ");
 
-                if (!isJwtUsed && roleHeader != null && !roleHeader.trim().isEmpty() && !user.getRole().equalsIgnoreCase(roleHeader.trim())) {
+                if (isJwtUsed) {
+                    if (!user.getRole().equalsIgnoreCase(finalRole)) {
+                        user.setRole(finalRole.toUpperCase());
+                        return userRepository.save(user);
+                    }
+                } else if (roleHeader != null && !roleHeader.trim().isEmpty() && !user.getRole().equalsIgnoreCase(roleHeader.trim())) {
                     user.setRole(roleHeader.trim().toUpperCase());
                     return userRepository.save(user);
                 }

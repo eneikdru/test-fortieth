@@ -298,4 +298,31 @@ public class KbDocumentSecurityIntegrationTest {
                         .header("X-User-Name", "some_user"))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Autowired
+    private JwtService jwtService;
+
+    @Test
+    public void testExistingUserRoleMismatchJWTClaimsIsUpdatedAndEnforced() throws Exception {
+        // Create an existing user with ADMINISTRATOR role in the database first
+        KbUser existingUser = new KbUser();
+        existingUser.setUsername("mismatched_user");
+        existingUser.setRole("ADMINISTRATOR");
+        userRepository.save(existingUser);
+
+        // Generate a token directly using jwtService so that the token payload claims STUDENT role,
+        // bypasses auth controller's login mapping which uses existing user role.
+        String studentToken = jwtService.generateToken("mismatched_user", "STUDENT");
+
+        // Attempting to delete a document should be forbidden because their authenticated JWT role is STUDENT.
+        // This checks if the resolveUser logic correctly updates and synchronizes the DB state to match the JWT authority,
+        // and refuses the action because they are treated as a STUDENT (forbidden to delete).
+        mockMvc.perform(delete("/api/v1/integration/documents/{id}", sampleDocId)
+                        .header("Authorization", "Bearer " + studentToken))
+                .andExpect(status().isForbidden());
+
+        // Also check if the user's role in the DB has been updated to STUDENT
+        KbUser updatedUser = userRepository.findByUsername("mismatched_user").orElseThrow();
+        assertEquals("STUDENT", updatedUser.getRole());
+    }
 }
