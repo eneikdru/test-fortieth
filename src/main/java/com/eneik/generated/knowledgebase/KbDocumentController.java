@@ -27,6 +27,8 @@ public class KbDocumentController {
     private final KbDocumentVersionRepository versionRepository;
     private final KbUserRepository userRepository;
     private final KbAuditLogRepository auditLogRepository;
+    private final KbFavoriteRepository favoriteRepository;
+    private final KbSavedQueryRepository savedQueryRepository;
 
     private static final String STORAGE_DIR = "data/storage";
 
@@ -40,11 +42,15 @@ public class KbDocumentController {
     public KbDocumentController(KbDocumentRepository documentRepository,
                                 KbDocumentVersionRepository versionRepository,
                                 KbUserRepository userRepository,
-                                KbAuditLogRepository auditLogRepository) {
+                                KbAuditLogRepository auditLogRepository,
+                                KbFavoriteRepository favoriteRepository,
+                                KbSavedQueryRepository savedQueryRepository) {
         this.documentRepository = documentRepository;
         this.versionRepository = versionRepository;
         this.userRepository = userRepository;
         this.auditLogRepository = auditLogRepository;
+        this.favoriteRepository = favoriteRepository;
+        this.savedQueryRepository = savedQueryRepository;
     }
 
     private KbUser getOrCreateSystemUser() {
@@ -467,6 +473,169 @@ public class KbDocumentController {
         return ResponseEntity.ok()
             .contentType(MediaType.APPLICATION_OCTET_STREAM)
             .body(content);
+    }
+
+    @PostMapping("/favorites")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ResponseEntity<?> addFavorite(
+            @RequestParam(value = "documentId", required = false) Long documentIdRequestParam,
+            @RequestBody(required = false) Map<String, Object> body,
+            @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
+
+        Long documentId = documentIdRequestParam;
+        if (documentId == null && body != null) {
+            Object idVal = body.get("documentId");
+            if (idVal instanceof Number) {
+                documentId = ((Number) idVal).longValue();
+            } else if (idVal instanceof String) {
+                try {
+                    documentId = Long.parseLong((String) idVal);
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+
+        if (documentId == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "documentId is required");
+        }
+
+        KbUser user = resolveUser(usernameHeader, roleHeader);
+        KbDocument doc = documentRepository.findById(documentId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Document not found"));
+
+        Optional<KbFavorite> existing = favoriteRepository.findByUserIdAndDocumentId(user.getId(), documentId);
+        if (existing.isPresent()) {
+            return ResponseEntity.ok().build();
+        }
+
+        KbFavorite favorite = new KbFavorite();
+        favorite.setUser(user);
+        favorite.setDocument(doc);
+        favoriteRepository.save(favorite);
+
+        logAction(user, "FAVORITE_ADD", "KbDocument", documentId, "Added document to favorites: " + doc.getTitle());
+
+        return ResponseEntity.status(HttpStatus.CREATED).build();
+    }
+
+    @GetMapping("/favorites")
+    public List<DocumentResponse> getFavorites(
+            @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
+
+        KbUser user = resolveUser(usernameHeader, roleHeader);
+        List<KbFavorite> favorites = favoriteRepository.findByUserId(user.getId());
+
+        return favorites.stream()
+            .map(fav -> mapToResponse(fav.getDocument()))
+            .collect(Collectors.toList());
+    }
+
+    @DeleteMapping("/favorites/{documentId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void removeFavorite(
+            @PathVariable Long documentId,
+            @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
+
+        KbUser user = resolveUser(usernameHeader, roleHeader);
+        Optional<KbFavorite> existing = favoriteRepository.findByUserIdAndDocumentId(user.getId(), documentId);
+        if (existing.isPresent()) {
+            favoriteRepository.delete(existing.get());
+            logAction(user, "FAVORITE_REMOVE", "KbDocument", documentId, "Removed document from favorites");
+        }
+    }
+
+    @PostMapping("/saved-queries")
+    @ResponseStatus(HttpStatus.CREATED)
+    public SavedQueryResponse saveQuery(
+            @RequestParam(value = "query", required = false) String queryParam,
+            @RequestBody(required = false) Map<String, Object> body,
+            @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
+
+        String queryText = queryParam;
+        if ((queryText == null || queryText.trim().isEmpty()) && body != null) {
+            Object qVal = body.get("query");
+            if (qVal != null) {
+                queryText = qVal.toString();
+            }
+        }
+
+        if (queryText == null || queryText.trim().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Query text is required");
+        }
+
+        KbUser user = resolveUser(usernameHeader, roleHeader);
+        KbSavedQuery sq = new KbSavedQuery();
+        sq.setUser(user);
+        sq.setQueryText(queryText.trim());
+        sq = savedQueryRepository.save(sq);
+
+        logAction(user, "SAVED_QUERY_CREATE", "KbSavedQuery", sq.getId(), "Saved search query: " + queryText.trim());
+
+        return mapToSavedQueryResponse(sq);
+    }
+
+    @GetMapping("/saved-queries")
+    public List<SavedQueryResponse> getSavedQueries(
+            @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
+
+        KbUser user = resolveUser(usernameHeader, roleHeader);
+        List<KbSavedQuery> queries = savedQueryRepository.findByUserId(user.getId());
+
+        return queries.stream()
+            .map(this::mapToSavedQueryResponse)
+            .collect(Collectors.toList());
+    }
+
+    @DeleteMapping("/saved-queries/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteSavedQuery(
+            @PathVariable Long id,
+            @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
+
+        KbUser user = resolveUser(usernameHeader, roleHeader);
+        KbSavedQuery sq = savedQueryRepository.findById(id)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Saved query not found"));
+
+        if (!sq.getUser().getId().equals(user.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access Denied: You do not own this saved query");
+        }
+
+        savedQueryRepository.delete(sq);
+        logAction(user, "SAVED_QUERY_DELETE", "KbSavedQuery", id, "Deleted saved query: " + sq.getQueryText());
+    }
+
+    public static class SavedQueryResponse {
+        private Long id;
+        private Long userId;
+        private String queryText;
+        private String createdAt;
+
+        public Long getId() { return id; }
+        public void setId(Long id) { this.id = id; }
+
+        public Long getUserId() { return userId; }
+        public void setUserId(Long userId) { this.userId = userId; }
+
+        public String getQueryText() { return queryText; }
+        public void setQueryText(String queryText) { this.queryText = queryText; }
+
+        public String getCreatedAt() { return createdAt; }
+        public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+    }
+
+    private SavedQueryResponse mapToSavedQueryResponse(KbSavedQuery sq) {
+        SavedQueryResponse resp = new SavedQueryResponse();
+        resp.setId(sq.getId());
+        resp.setUserId(sq.getUser().getId());
+        resp.setQueryText(sq.getQueryText());
+        DateTimeFormatter dtf = DateTimeFormatter.ISO_DATE_TIME;
+        resp.setCreatedAt(sq.getCreatedAt().format(dtf));
+        return resp;
     }
 
     private String getFileExtension(String filename) {
