@@ -325,4 +325,63 @@ public class DocumentSearchAndContentTest {
                 .andExpect(jsonPath("$[0].title").value("Standard Doc 3"))
                 .andExpect(jsonPath("$[2].title").value("Standard Doc 5"));
     }
+
+    @Test
+    public void testFuzzyAndExactSearchPrioritization() throws Exception {
+        // 1. Upload Doc A: correct spelling "Введение в Эпидемиологию"
+        MockMultipartFile fileA = new MockMultipartFile(
+                "file",
+                "epidem_correct.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Epidemiology study material.".getBytes(StandardCharsets.UTF_8)
+        );
+
+        mockMvc.perform(multipart("/api/v1/integration/documents")
+                        .file(fileA)
+                        .param("title", "Введение в Эпидемиологию")
+                        .param("category", "PrioritizationCategory")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated());
+
+        // 2. Upload Doc B: has spelling error "Введение в Эпидемологию"
+        MockMultipartFile fileB = new MockMultipartFile(
+                "file",
+                "epidem_error.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Epidemology study material with a typo.".getBytes(StandardCharsets.UTF_8)
+        );
+
+        mockMvc.perform(multipart("/api/v1/integration/documents")
+                        .file(fileB)
+                        .param("title", "Введение в Эпидемологию")
+                        .param("category", "PrioritizationCategory")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated());
+
+        // 3. Search with query "Эпидемиологию" (correct spelling).
+        // Doc A ("Введение в Эпидемиологию") matches exactly.
+        // Doc B ("Введение в Эпидемологию") matches fuzzily.
+        // Both should be returned, but Doc A must be prioritized (first) over Doc B (second).
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("query", "Эпидемиологию")
+                        .param("specialty", "PrioritizationCategory")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].title").value("Введение в Эпидемиологию"))
+                .andExpect(jsonPath("$[1].title").value("Введение в Эпидемологию"));
+
+        // 4. Search with query "Эпидемологию" (with the typo).
+        // Doc B ("Введение в Эпидемологию") matches exactly.
+        // Doc A ("Введение в Эпидемиологию") matches fuzzily.
+        // Both should be returned, but Doc B must be prioritized (first) over Doc A (second).
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("query", "Эпидемологию")
+                        .param("specialty", "PrioritizationCategory")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].title").value("Введение в Эпидемологию"))
+                .andExpect(jsonPath("$[1].title").value("Введение в Эпидемиологию"));
+    }
 }
