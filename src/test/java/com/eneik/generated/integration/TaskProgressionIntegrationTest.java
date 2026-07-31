@@ -29,32 +29,44 @@ public class TaskProgressionIntegrationTest {
     private TaskRepository taskRepository;
 
     @Autowired
+    private FeatureRepository featureRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @BeforeEach
     public void setUp() {
         taskRepository.deleteAll();
+        featureRepository.deleteAll();
     }
 
     @Test
     public void testTaskResolutionAndReadinessScore() throws Exception {
         // Arrange
+        FeatureEntity feature = new FeatureEntity();
+        feature.setTitle("Test Feature");
+        feature.setReadinessRatio(0.33); // Stalled at 1/3 initially
+        featureRepository.save(feature);
+
         // Setup 10 tasks in total: 8 READY, 1 PENDING_REVIEW, 1 FAILED
         for (int i = 1; i <= 8; i++) {
             Task t = new Task();
             t.setTitle("Task " + i);
             t.setStatus(TaskStatus.READY);
+            t.setFeatureId(feature.getId());
             taskRepository.save(t);
         }
 
         Task pending = new Task();
         pending.setTitle("Pending Task");
         pending.setStatus(TaskStatus.PENDING_REVIEW);
+        pending.setFeatureId(feature.getId());
         taskRepository.save(pending);
 
         Task failed = new Task();
         failed.setTitle("Failed Task");
         failed.setStatus(TaskStatus.FAILED);
+        failed.setFeatureId(feature.getId());
         taskRepository.save(failed);
 
         // Verify initial state
@@ -82,17 +94,27 @@ public class TaskProgressionIntegrationTest {
 
         List<Task> pendingTasks = taskRepository.findByStatus(TaskStatus.PENDING_REVIEW);
         assertThat(pendingTasks).isEmpty();
+
+        // Verify feature readiness in DB
+        FeatureEntity updatedFeature = featureRepository.findById(feature.getId()).get();
+        // 9 resolved out of 10 tasks = 0.9
+        assertThat(updatedFeature.getReadinessRatio()).isEqualTo(0.9);
     }
 
     @Test
     public void testTaskResolutionPassesThreshold() throws Exception {
         // Arrange
-        taskRepository.deleteAll();
+        FeatureEntity feature = new FeatureEntity();
+        feature.setTitle("Threshold Feature");
+        feature.setReadinessRatio(0.0);
+        featureRepository.save(feature);
+
         // Setup 10 tasks in total: 10 READY
         for (int i = 1; i <= 10; i++) {
             Task t = new Task();
             t.setTitle("Task " + i);
             t.setStatus(TaskStatus.READY);
+            t.setFeatureId(feature.getId());
             taskRepository.save(t);
         }
 
@@ -120,5 +142,9 @@ public class TaskProgressionIntegrationTest {
 
         List<Task> readyTasks = taskRepository.findByStatus(TaskStatus.READY);
         assertThat(readyTasks).isEmpty();
+
+        // Verify feature readiness in DB
+        FeatureEntity updatedFeature = featureRepository.findById(feature.getId()).get();
+        assertThat(updatedFeature.getReadinessRatio()).isEqualTo(1.0);
     }
 }

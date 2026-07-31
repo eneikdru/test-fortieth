@@ -3,8 +3,8 @@ package com.eneik.generated.integration;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "tasks")
-public class Task {
+@Table(name = "features")
+public class FeatureEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -12,19 +12,8 @@ public class Task {
     @Column(nullable = false)
     private String title;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private TaskStatus status;
-    @Column(name = "feature_id")
-    private Long featureId;
-
-    public Long getFeatureId() {
-        return featureId;
-    }
-
-    public void setFeatureId(Long featureId) {
-        this.featureId = featureId;
-    }
+    @Column(name = "readiness_ratio", nullable = false)
+    private double readinessRatio = 0.0;
 
     public Long getId() {
         return id;
@@ -42,11 +31,11 @@ public class Task {
         this.title = title;
     }
 
-    public TaskStatus getStatus() {
-        return status;
+    public double getReadinessRatio() {
+        return readinessRatio;
     }
 
-    public void setStatus(TaskStatus status) {
-        this.status = status;
+    public void setReadinessRatio(double readinessRatio) {
+        this.readinessRatio = readinessRatio;
     }
 }
