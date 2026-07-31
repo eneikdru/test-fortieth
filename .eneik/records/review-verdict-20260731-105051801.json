@@ -1,0 +1,13 @@
+{
+  "verdicts": [
+    {
+      "sourceIndex": 0,
+      "verdict": "block",
+      "criticalReason": "The PR commits a .png file (frontend/src/assets/hero.png), which violates the strict rule against committing generated/build artifacts (.zip/.png/.webm/.trace files). Additionally, it directly contradicts the Acceptance Criteria by omitting the required Moodle configuration script.",
+      "concerns": [
+        "Uses fixed px value (884px) in app.css instead of relative units.",
+        "Uses legacy Svelte 4 event directive 'on:scroll' instead of Svelte 5 'onscroll'."
+      ]
+    }
+  ]
+}
