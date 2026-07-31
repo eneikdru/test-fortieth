@@ -46,6 +46,15 @@ public class KbDocumentCommentIntegrationTest {
 
     private Long sampleDocId;
 
+    private String getJwtToken(String username, String role) throws Exception {
+        String responseStr = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"username\":\"" + username + "\",\"password\":\"password\",\"role\":\"" + role + "\"}"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        return responseStr.split("\"token\":\"")[1].split("\"")[0];
+    }
+
     @BeforeEach
     public void setup() throws Exception {
         // Clear database in correct order
@@ -54,6 +63,8 @@ public class KbDocumentCommentIntegrationTest {
         versionRepository.deleteAll();
         documentRepository.deleteAll();
         userRepository.deleteAll();
+
+        String token = getJwtToken("expert_doctor", "ADMINISTRATOR");
 
         // Create an administrator and upload a document
         MockMultipartFile file = new MockMultipartFile(
@@ -68,8 +79,7 @@ public class KbDocumentCommentIntegrationTest {
                         .param("title", "Clinical Guidelines 2026")
                         .param("category", "Guidelines")
                         .param("tags", "clinical")
-                        .header("X-User-Name", "expert_doctor")
-                        .header("X-User-Role", "ADMINISTRATOR")
+                        .header("Authorization", "Bearer " + token)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
@@ -79,6 +89,10 @@ public class KbDocumentCommentIntegrationTest {
 
     @Test
     public void testSubmitCommentAndUpdateRequestAndRetrieveDocument() throws Exception {
+        String reviewerToken = getJwtToken("reviewer_alice", "ADMINISTRATOR");
+        String doctorToken = getJwtToken("doctor_bob", "ADMINISTRATOR");
+        String anyUserToken = getJwtToken("any_user", "STUDENT");
+
         // 1. Submit a comment as authenticated user
         String commentJson = "{"
                 + "\"content\": \"This section requires additional literature sources.\","
@@ -88,8 +102,7 @@ public class KbDocumentCommentIntegrationTest {
         mockMvc.perform(post("/api/v1/integration/documents/{id}/comments", sampleDocId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(commentJson)
-                        .header("X-User-Name", "reviewer_alice")
-                        .header("X-User-Role", "ADMINISTRATOR"))
+                        .header("Authorization", "Bearer " + reviewerToken))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id", notNullValue()))
                 .andExpect(jsonPath("$.content", is("This section requires additional literature sources.")))
@@ -105,8 +118,7 @@ public class KbDocumentCommentIntegrationTest {
         mockMvc.perform(post("/api/v1/integration/documents/{id}/comments", sampleDocId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updateRequestJson)
-                        .header("X-User-Name", "doctor_bob")
-                        .header("X-User-Role", "ADMINISTRATOR"))
+                        .header("Authorization", "Bearer " + doctorToken))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id", notNullValue()))
                 .andExpect(jsonPath("$.content", is("Requesting actualization of pediatric dosages.")))
@@ -123,8 +135,7 @@ public class KbDocumentCommentIntegrationTest {
 
         // 3. Retrieve the document and verify the comments are correctly available
         mockMvc.perform(get("/api/v1/integration/documents/{id}", sampleDocId)
-                        .header("X-User-Name", "any_user")
-                        .header("X-User-Role", "STUDENT"))
+                        .header("Authorization", "Bearer " + anyUserToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id", is(sampleDocId.intValue())))
                 .andExpect(jsonPath("$.comments", hasSize(2)))
@@ -144,6 +155,8 @@ public class KbDocumentCommentIntegrationTest {
 
     @Test
     public void testSubmitCommentWithEmptyContentReturns400BadRequest() throws Exception {
+        String reviewerToken = getJwtToken("reviewer_alice", "ADMINISTRATOR");
+
         String commentJson = "{"
                 + "\"content\": \"   \","
                 + "\"type\": \"COMMENT\""
@@ -152,13 +165,14 @@ public class KbDocumentCommentIntegrationTest {
         mockMvc.perform(post("/api/v1/integration/documents/{id}/comments", sampleDocId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(commentJson)
-                        .header("X-User-Name", "reviewer_alice")
-                        .header("X-User-Role", "ADMINISTRATOR"))
+                        .header("Authorization", "Bearer " + reviewerToken))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     public void testSubmitCommentWithInvalidTypeReturns400BadRequest() throws Exception {
+        String reviewerToken = getJwtToken("reviewer_alice", "ADMINISTRATOR");
+
         String commentJson = "{"
                 + "\"content\": \"Valid content but wrong type\","
                 + "\"type\": \"INVALID_COLLABORATION_TYPE\""
@@ -167,13 +181,14 @@ public class KbDocumentCommentIntegrationTest {
         mockMvc.perform(post("/api/v1/integration/documents/{id}/comments", sampleDocId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(commentJson)
-                        .header("X-User-Name", "reviewer_alice")
-                        .header("X-User-Role", "ADMINISTRATOR"))
+                        .header("Authorization", "Bearer " + reviewerToken))
                 .andExpect(status().isBadRequest());
     }
 
     @Test
     public void testDeleteDocumentCascadesCommentsDeletion() throws Exception {
+        String reviewerToken = getJwtToken("reviewer_alice", "ADMINISTRATOR");
+
         // 1. Submit a valid comment for the sample document
         String commentJson = "{"
                 + "\"content\": \"Temporary comment to check cascaded delete.\","
@@ -183,8 +198,7 @@ public class KbDocumentCommentIntegrationTest {
         mockMvc.perform(post("/api/v1/integration/documents/{id}/comments", sampleDocId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(commentJson)
-                        .header("X-User-Name", "reviewer_alice")
-                        .header("X-User-Role", "ADMINISTRATOR"))
+                        .header("Authorization", "Bearer " + reviewerToken))
                 .andExpect(status().isCreated());
 
         // Verify the comment is persisted in DB and associated with the document
@@ -193,8 +207,7 @@ public class KbDocumentCommentIntegrationTest {
 
         // 2. Delete the document
         mockMvc.perform(delete("/api/v1/integration/documents/{id}", sampleDocId)
-                        .header("X-User-Name", "reviewer_alice")
-                        .header("X-User-Role", "ADMINISTRATOR"))
+                        .header("Authorization", "Bearer " + reviewerToken))
                 .andExpect(status().isNoContent());
 
         entityManager.flush();
