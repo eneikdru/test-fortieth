@@ -253,6 +253,12 @@ public class KbDocumentController {
             @RequestParam(required = false) String specialty,
             @RequestParam(required = false) String educationLevel,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime updatedAfter,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size,
+            @RequestParam(required = false) Integer pageNumber,
+            @RequestParam(required = false) Integer pageSize,
+            @RequestParam(required = false) Integer limit,
+            @RequestParam(required = false) Integer offset,
             @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
             @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
 
@@ -264,7 +270,7 @@ public class KbDocumentController {
         List<KbDocument> docs = documentRepository.findAll();
         List<String> expandedTerms = expandSearchTerms(query);
 
-        return docs.stream()
+        List<DocumentResponse> results = docs.stream()
             .filter(doc -> {
                 if (doc.getVersions() == null || doc.getVersions().isEmpty()) {
                     return false;
@@ -373,6 +379,40 @@ public class KbDocumentController {
             })
             .map(this::mapToResponse)
             .collect(Collectors.toList());
+
+        // Resolve page/size or limit/offset
+        int limitVal = 10; // Default limit/size
+        int start = 0;     // Default start/offset
+
+        if (pageSize != null) {
+            limitVal = pageSize;
+        } else if (size != null) {
+            limitVal = size;
+        } else if (limit != null) {
+            limitVal = limit;
+        }
+
+        if (pageNumber != null) {
+            start = pageNumber * limitVal;
+        } else if (page != null) {
+            start = page * limitVal;
+        } else if (offset != null) {
+            start = offset;
+        }
+
+        if (start < 0) {
+            start = 0;
+        }
+        if (limitVal <= 0) {
+            limitVal = 10;
+        }
+
+        int end = Math.min(start + limitVal, results.size());
+        if (start > results.size()) {
+            return Collections.emptyList();
+        }
+
+        return results.subList(start, end);
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)

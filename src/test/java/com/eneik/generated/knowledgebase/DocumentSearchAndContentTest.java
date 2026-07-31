@@ -241,4 +241,88 @@ public class DocumentSearchAndContentTest {
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].title").value("Регламент аспирантуры"));
     }
+
+    @Test
+    public void testSearchPagination() throws Exception {
+        // Upload 12 documents to check default pagination (default limit is 10)
+        for (int i = 1; i <= 12; i++) {
+            MockMultipartFile file = new MockMultipartFile(
+                    "file",
+                    "doc_" + i + ".txt",
+                    MediaType.TEXT_PLAIN_VALUE,
+                    ("Content for document number " + i).getBytes(StandardCharsets.UTF_8)
+            );
+
+            mockMvc.perform(multipart("/api/v1/integration/documents")
+                            .file(file)
+                            .param("title", "Standard Doc " + i)
+                            .param("category", "PaginationTestCategory")
+                            .accept(MediaType.APPLICATION_JSON))
+                    .andExpect(status().isCreated());
+        }
+
+        // 1. Default pagination without page/size parameters - should apply default limit of 10
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("specialty", "PaginationTestCategory") // matches category via special filter
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(10)))
+                .andExpect(jsonPath("$[0].title").value("Standard Doc 1"))
+                .andExpect(jsonPath("$[9].title").value("Standard Doc 10"));
+
+        // 2. Specified page and size (page=0, size=5)
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("specialty", "PaginationTestCategory")
+                        .param("page", "0")
+                        .param("size", "5")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(5)))
+                .andExpect(jsonPath("$[0].title").value("Standard Doc 1"))
+                .andExpect(jsonPath("$[4].title").value("Standard Doc 5"));
+
+        // 3. Specified page and size (page=1, size=5) - second page
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("specialty", "PaginationTestCategory")
+                        .param("page", "1")
+                        .param("size", "5")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(5)))
+                .andExpect(jsonPath("$[0].title").value("Standard Doc 6"))
+                .andExpect(jsonPath("$[4].title").value("Standard Doc 10"));
+
+        // 4. Specified page and size (page=2, size=5) - third page with remaining 2 documents
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("specialty", "PaginationTestCategory")
+                        .param("page", "2")
+                        .param("size", "5")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].title").value("Standard Doc 11"))
+                .andExpect(jsonPath("$[1].title").value("Standard Doc 12"));
+
+        // 5. Using pageNumber and pageSize (pageNumber=1, pageSize=4)
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("specialty", "PaginationTestCategory")
+                        .param("pageNumber", "1")
+                        .param("pageSize", "4")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(4)))
+                .andExpect(jsonPath("$[0].title").value("Standard Doc 5"))
+                .andExpect(jsonPath("$[3].title").value("Standard Doc 8"));
+
+        // 6. Using offset and limit (offset=2, limit=3)
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("specialty", "PaginationTestCategory")
+                        .param("offset", "2")
+                        .param("limit", "3")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(3)))
+                .andExpect(jsonPath("$[0].title").value("Standard Doc 3"))
+                .andExpect(jsonPath("$[2].title").value("Standard Doc 5"));
+    }
 }
