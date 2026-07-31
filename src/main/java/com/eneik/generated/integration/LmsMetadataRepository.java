@@ -6,4 +6,5 @@ import java.util.Optional;
 
 @Repository
 public interface LmsMetadataRepository extends JpaRepository<LmsMetadata, Long> {
+    Optional<LmsMetadata> findByExternalIdAndMetadataKey(String externalId, String metadataKey);
 }
