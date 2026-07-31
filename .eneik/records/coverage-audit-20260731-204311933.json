@@ -1,0 +1,46 @@
+{
+  "gaps": [
+    {
+      "title": "Persistent Document Comments and Update Requests",
+      "roleTag": "BARCAN-TAG-02",
+      "jtbd": "When viewing a document in the Knowledge Base, I want to submit persistent comments and update requests, so that I can collaborate with others on content revisions.",
+      "acceptanceCriteria": "Given a document exists in the Knowledge Base, When a user submits a comment or update request, Then the data should be saved to the database and associated with that document.",
+      "reason": "literal brief requirement: Section 4 'Работа с контентом' explicitly asks for commenting and sending update requests ('возможность комментирования и отправки запросов на актуализацию') on documents."
+    },
+    {
+      "title": "Persistent Search Queries and Favorites",
+      "roleTag": "BARCAN-TAG-02",
+      "jtbd": "When using the Knowledge Base, I want to save search queries and mark materials as favorites, so that I can quickly access them in subsequent sessions.",
+      "acceptanceCriteria": "Given an authenticated user, When they save a query or add a document to favorites, Then the preference must be persisted in the database and retrieved on next login.",
+      "reason": "literal brief requirement: Section 4 'Поиск и навигация' explicitly asks for the ability to save search queries and favorite materials ('возможность сохранения поисковых запросов и избранных материалов')."
+    },
+    {
+      "title": "Fuzzy Search and Typo Tolerance",
+      "roleTag": "BARCAN-TAG-02",
+      "jtbd": "When I enter search queries with typos or spelling errors, I want the system to understand my intent and find relevant documents, so that the search experience is robust and helpful.",
+      "acceptanceCriteria": "Given the search query contains spelling errors (e.g. 'Эпидемология'), When the search is executed, Then the system should employ fuzzy matching or spell correction and return relevant documents.",
+      "reason": "literal brief requirement: Section 4 'Поиск и навигация' explicitly asks for typo correction ('исправление опечаток') in search operations."
+    },
+    {
+      "title": "Dynamic Document Export to PDF and DOCX",
+      "roleTag": "BARCAN-TAG-02",
+      "jtbd": "When viewing materials in the Knowledge Base, I want to export and download them as formatted PDF or DOCX files, so that I can easily print or read them offline.",
+      "acceptanceCriteria": "Given a structured document, When a user clicks export to PDF or DOCX, Then the backend should dynamically generate and serve a formatted PDF/DOCX file containing the document content.",
+      "reason": "literal brief requirement: Section 4 'Интеграции и экспорт' explicitly asks for document exporting to PDF/DOCX ('выгрузка документов в PDF/DOCX')."
+    },
+    {
+      "title": "User Authentication and Secure Session Management",
+      "roleTag": "BARCAN-TAG-02",
+      "jtbd": "When accessing the Knowledge Base, I want my identity to be securely authenticated and my session managed, so that unauthorized users cannot access sensitive blocks or spoof roles.",
+      "acceptanceCriteria": "Given a user on the login screen, When they provide valid credentials, Then a secure session token (JWT) is generated and validated on all subsequent requests, preventing header spoofing.",
+      "reason": "domain-standard expectation: Standard security practices for multi-role educational portals require actual, validated login and session authorization to prevent header-based role spoofing (X-User-Role)."
+    },
+    {
+      "title": "Search and List Pagination",
+      "roleTag": "BARCAN-TAG-02",
+      "jtbd": "When viewing a long list of search results, I want the results to be paginated, so that system resource consumption and frontend load times are optimized.",
+      "acceptanceCriteria": "Given a search query with many results, When the query is executed, Then the backend should return results in paginated pages using page number and size parameters.",
+      "reason": "domain-standard expectation: A document repository standardly requires list/search pagination to ensure optimal performance, low latency, and efficient database querying."
+    }
+  ]
+}
