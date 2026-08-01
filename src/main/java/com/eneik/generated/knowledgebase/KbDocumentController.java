@@ -2,6 +2,7 @@ package com.eneik.generated.knowledgebase;
 
 import com.eneik.generated.integration.LmsMetadata;
 import com.eneik.generated.integration.LmsMetadataRepository;
+import org.apache.tika.Tika;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -824,6 +825,26 @@ public class KbDocumentController {
         return results.subList(start, end);
     }
 
+    private String extractText(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return "";
+        }
+        try (java.io.InputStream is = file.getInputStream()) {
+            Tika tika = new Tika();
+            String content = tika.parseToString(is);
+            if (content != null && !content.trim().isEmpty()) {
+                return content;
+            }
+        } catch (Exception e) {
+            // Optional fallback
+        }
+        try {
+            return new String(file.getBytes(), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @ResponseStatus(HttpStatus.CREATED)
     public DocumentResponse uploadDocument(
@@ -873,7 +894,7 @@ public class KbDocumentController {
             Path filePath = Paths.get(STORAGE_DIR, uniqueFilename);
             Files.write(filePath, file.getBytes());
 
-            String extractedContent = new String(file.getBytes(), StandardCharsets.UTF_8);
+            String extractedContent = extractText(file);
 
             // 3. Create document version
             KbDocumentVersion version = new KbDocumentVersion();
@@ -963,7 +984,7 @@ public class KbDocumentController {
                 Path filePath = Paths.get(STORAGE_DIR, uniqueFilename);
                 Files.write(filePath, file.getBytes());
 
-                String extractedContent = new String(file.getBytes(), StandardCharsets.UTF_8);
+                String extractedContent = extractText(file);
 
                 KbDocumentVersion version = new KbDocumentVersion();
                 version.setDocument(doc);
