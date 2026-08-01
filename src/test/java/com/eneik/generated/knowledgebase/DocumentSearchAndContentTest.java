@@ -410,6 +410,34 @@ public class DocumentSearchAndContentTest {
     }
 
     @Test
+    public void testBinaryExtractionWithTika() throws Exception {
+        // Upload a dummy binary file (we use a simple text string here, but Tika parses it as well, proving the flow)
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "dummy_binary.pdf",
+                MediaType.APPLICATION_PDF_VALUE,
+                "Simulated binary content that Tika will parse".getBytes(StandardCharsets.UTF_8)
+        );
+
+        // Upload
+        String responseContent = mockMvc.perform(multipart("/api/v1/integration/documents")
+                        .file(file)
+                        .param("title", "Tika Binary Test Doc")
+                        .param("category", "Test")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+        // Verify it was saved correctly
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("query", "Simulated binary content")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Tika Binary Test Doc"));
+    }
+
+    @Test
     public void testUnifiedSearchWithLocalAndLmsMetadata() throws Exception {
         // 1. Upload a local document
         MockMultipartFile file1 = new MockMultipartFile(

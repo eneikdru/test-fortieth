@@ -14,10 +14,13 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import org.apache.tika.Tika;
+import org.apache.tika.exception.TikaException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -873,7 +876,13 @@ public class KbDocumentController {
             Path filePath = Paths.get(STORAGE_DIR, uniqueFilename);
             Files.write(filePath, file.getBytes());
 
-            String extractedContent = new String(file.getBytes(), StandardCharsets.UTF_8);
+            String extractedContent;
+            try (InputStream is = file.getInputStream()) {
+                Tika tika = new Tika();
+                extractedContent = tika.parseToString(is);
+            } catch (TikaException e) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to parse document content", e);
+            }
 
             // 3. Create document version
             KbDocumentVersion version = new KbDocumentVersion();
@@ -963,7 +972,13 @@ public class KbDocumentController {
                 Path filePath = Paths.get(STORAGE_DIR, uniqueFilename);
                 Files.write(filePath, file.getBytes());
 
-                String extractedContent = new String(file.getBytes(), StandardCharsets.UTF_8);
+                String extractedContent;
+                try (InputStream is = file.getInputStream()) {
+                    Tika tika = new Tika();
+                    extractedContent = tika.parseToString(is);
+                } catch (TikaException e) {
+                    throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to parse updated document content", e);
+                }
 
                 KbDocumentVersion version = new KbDocumentVersion();
                 version.setDocument(doc);
