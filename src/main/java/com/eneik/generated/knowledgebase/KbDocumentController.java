@@ -1,5 +1,7 @@
 package com.eneik.generated.knowledgebase;
 
+import com.eneik.generated.integration.LmsMetadata;
+import com.eneik.generated.integration.LmsMetadataRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -32,6 +34,7 @@ public class KbDocumentController {
     private final KbDocumentCommentRepository commentRepository;
     private final KbUserFavoriteRepository userFavoriteRepository;
     private final KbSavedQueryRepository savedQueryRepository;
+    private final LmsMetadataRepository lmsMetadataRepository;
 
     @Autowired
     private JwtService jwtService;
@@ -54,7 +57,8 @@ public class KbDocumentController {
                                 KbAuditLogRepository auditLogRepository,
                                 KbDocumentCommentRepository commentRepository,
                                 KbUserFavoriteRepository userFavoriteRepository,
-                                KbSavedQueryRepository savedQueryRepository) {
+                                KbSavedQueryRepository savedQueryRepository,
+                                LmsMetadataRepository lmsMetadataRepository) {
         this.documentRepository = documentRepository;
         this.versionRepository = versionRepository;
         this.userRepository = userRepository;
@@ -62,6 +66,7 @@ public class KbDocumentController {
         this.commentRepository = commentRepository;
         this.userFavoriteRepository = userFavoriteRepository;
         this.savedQueryRepository = savedQueryRepository;
+        this.lmsMetadataRepository = lmsMetadataRepository;
     }
 
     private KbUser getOrCreateSystemUser() {
@@ -549,18 +554,115 @@ public class KbDocumentController {
             : Collections.emptySet();
 
         List<KbDocument> docs = documentRepository.findAll();
-        String correctedQuery = correctQueryIntent(query, docs);
+
+        List<LmsMetadata> lmsList = lmsMetadataRepository.findAll();
+        Map<String, List<LmsMetadata>> lmsGrouped = lmsList.stream()
+            .collect(Collectors.groupingBy(LmsMetadata::getExternalId));
+
+        List<KbDocument> lmsDocs = new ArrayList<>();
+        KbUser defaultAuthor = user != null ? user : getOrCreateSystemUser();
+        for (Map.Entry<String, List<LmsMetadata>> entry : lmsGrouped.entrySet()) {
+            String externalId = entry.getKey();
+            List<LmsMetadata> group = entry.getValue();
+
+            KbDocument virtualDoc = new KbDocument();
+            long minId = group.stream().mapToLong(LmsMetadata::getId).min().orElse(1L);
+            virtualDoc.setId(-minId);
+
+            Map<String, String> metadataMap = new HashMap<>();
+            for (LmsMetadata m : group) {
+                if (m.getMetadataKey() != null && m.getMetadataValue() != null) {
+                    metadataMap.put(m.getMetadataKey().trim().toLowerCase(), m.getMetadataValue().trim());
+                }
+            }
+
+            String title = metadataMap.get("title");
+            if (title == null) title = metadataMap.get("name");
+            if (title == null) title = metadataMap.get("subject");
+            if (title == null) title = metadataMap.get("filename");
+            if (title == null) title = metadataMap.get("course");
+            if (title == null) title = "LMS Material: " + externalId;
+            virtualDoc.setTitle(title);
+
+            String category = metadataMap.get("category");
+            if (category == null) category = metadataMap.get("type");
+            if (category == null) category = "LMS Material";
+            virtualDoc.setCategory(category);
+
+            virtualDoc.setAuthor(defaultAuthor);
+
+            LocalDateTime createdAt = group.stream()
+                .map(LmsMetadata::getCreatedAt)
+                .filter(Objects::nonNull)
+                .min(LocalDateTime::compareTo)
+                .orElse(LocalDateTime.now());
+            LocalDateTime updatedAt = group.stream()
+                .map(LmsMetadata::getUpdatedAt)
+                .filter(Objects::nonNull)
+                .max(LocalDateTime::compareTo)
+                .orElse(LocalDateTime.now());
+            virtualDoc.setCreatedAt(createdAt);
+            virtualDoc.setUpdatedAt(updatedAt);
+
+            Set<String> tags = new HashSet<>();
+            String tagsStr = metadataMap.get("tags");
+            if (tagsStr == null) tagsStr = metadataMap.get("tag");
+            if (tagsStr == null) tagsStr = metadataMap.get("keywords");
+            if (tagsStr != null && !tagsStr.trim().isEmpty()) {
+                for (String t : tagsStr.split("[,;]+")) {
+                    if (!t.trim().isEmpty()) {
+                        tags.add(t.trim());
+                    }
+                }
+            }
+            tags.add("LMS");
+            tags.add("SDO");
+            tags.add("Teachbase");
+            virtualDoc.setTags(tags);
+
+            KbDocumentVersion version = new KbDocumentVersion();
+            version.setDocument(virtualDoc);
+            version.setVersionNumber(1);
+
+            String fileType = metadataMap.get("filetype");
+            if (fileType == null) fileType = metadataMap.get("file_type");
+            if (fileType == null) fileType = metadataMap.get("format");
+            if (fileType == null) fileType = "html";
+            version.setFileType(fileType);
+
+            String filePath = metadataMap.get("filepath");
+            if (filePath == null) filePath = metadataMap.get("url");
+            if (filePath == null) filePath = "/api/v1/integration/documents/download/" + externalId;
+            version.setFilePath(filePath);
+
+            String indexedContent = metadataMap.entrySet().stream()
+                .map(e -> e.getKey() + ": " + e.getValue())
+                .collect(Collectors.joining("\n"));
+            version.setIndexedContent(indexedContent);
+
+            version.setCreatedBy(defaultAuthor);
+            version.setCreatedAt(createdAt);
+
+            virtualDoc.setVersions(new ArrayList<>(Collections.singletonList(version)));
+            lmsDocs.add(virtualDoc);
+        }
+
+        List<KbDocument> allCombinedDocs = new ArrayList<>();
+        allCombinedDocs.addAll(docs);
+        allCombinedDocs.addAll(lmsDocs);
+
+        String correctedQuery = correctQueryIntent(query, allCombinedDocs);
         List<String> expandedTerms = expandSearchTerms(correctedQuery);
 
         final Map<Long, Integer> docScores = new HashMap<>();
         if (query != null && !query.trim().isEmpty()) {
-            for (KbDocument doc : docs) {
+            for (KbDocument doc : allCombinedDocs) {
                 int score = calculateMatchScore(doc, query, correctedQuery, expandedTerms);
                 docScores.put(doc.getId(), score);
             }
         }
 
-        List<DocumentResponse> results = docs.stream()
+        List<DocumentResponse> results = allCombinedDocs.stream()
             .filter(doc -> {
                 if (favoritesOnly != null && favoritesOnly) {
                     if (!favoriteDocIds.contains(doc.getId())) {
