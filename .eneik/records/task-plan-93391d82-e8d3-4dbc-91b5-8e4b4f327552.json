@@ -1,0 +1,64 @@
+{
+  "epics": [
+    {
+      "existingEpicId": "31423860-c802-4cd4-aac1-af966e8e3804",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "reduce mean time to recovery by 50%",
+      "tocConstraintRef": "disaster recovery bottleneck",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: System backup must be triggered by an administrator"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Implement system backup trigger",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing the backup mechanism for this epic, I want to create a secure snapshot of the database and uploaded files, so that system safety is ensured",
+          "acceptanceCriteria": "Given an admin user\nWhen they trigger a backup\nThen the backend creates and securely stores a snapshot of the database and uploaded files",
+          "leanValue": "essential",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "backup script performance",
+          "sixSigmaMetric": "reduce backup script execution time to under 5 mins",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    },
+    {
+      "existingEpicId": "2bb17664-60fe-4da4-a0a3-a1a2d8d57260",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "increase search result relevance score by 20%",
+      "tocConstraintRef": "knowledge retrieval fragmentation",
+      "sourceIndex": 1,
+      "requirements": [
+        "R1: Search results include indexed materials from LMS platforms"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Include LMS metadata in unified search",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing search inclusion for this epic, I want to query LmsMetadata alongside KbDocuments, so that knowledge retrieval fragmentation is reduced",
+          "acceptanceCriteria": "Given a search query\nWhen the user executes a search\nThen the backend searches both local KbDocuments and synchronized LmsMetadata, returning a unified set of results",
+          "leanValue": "essential",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "search query latency",
+          "sixSigmaMetric": "maintain search query latency under 200ms",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    }
+  ]
+}
