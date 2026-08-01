@@ -10,6 +10,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -499,5 +500,125 @@ public class TaskProgressionIntegrationTest {
 
         List<Task> pendingTasks = taskRepository.findByStatus(TaskStatus.PENDING_REVIEW);
         assertThat(pendingTasks).isEmpty();
+    }
+
+    @Test
+    public void testReplicateProjectStalledStateAndResolution() throws Exception {
+        // Arrange
+        // We replicate: 11/13 features complete; 5 tasks queued (READY); 2 tasks failed.
+        // Falsification readiness initially at 85% which is below the 90% target.
+        // Total tasks count = 47.
+        // 40 RESOLVED tasks. (40 / 47 = 85.1% readiness)
+        // 5 READY tasks (queued).
+        // 2 FAILED tasks.
+
+        List<FeatureEntity> completeFeatures = new ArrayList<>();
+        for (int i = 1; i <= 11; i++) {
+            FeatureEntity f = new FeatureEntity();
+            f.setTitle("Complete Feature " + i);
+            f.setReadinessRatio(1.0);
+            featureRepository.save(f);
+            completeFeatures.add(f);
+
+            for (int t = 1; t <= 3; t++) {
+                Task task = new Task();
+                task.setTitle("Complete Feature " + i + " Task " + t);
+                task.setStatus(TaskStatus.RESOLVED);
+                task.setFeatureId(f.getId());
+                taskRepository.save(task);
+            }
+        }
+
+        FeatureEntity incomplete1 = new FeatureEntity();
+        incomplete1.setTitle("Incomplete Feature 1");
+        incomplete1.setReadinessRatio(0.625);
+        featureRepository.save(incomplete1);
+
+        for (int t = 1; t <= 5; t++) {
+            Task task = new Task();
+            task.setTitle("Incomplete Feature 1 Resolved Task " + t);
+            task.setStatus(TaskStatus.RESOLVED);
+            task.setFeatureId(incomplete1.getId());
+            taskRepository.save(task);
+        }
+        for (int t = 1; t <= 2; t++) {
+            Task task = new Task();
+            task.setTitle("Incomplete Feature 1 Failed Task " + t);
+            task.setStatus(TaskStatus.FAILED);
+            task.setFeatureId(incomplete1.getId());
+            taskRepository.save(task);
+        }
+        Task readyTask1 = new Task();
+        readyTask1.setTitle("Incomplete Feature 1 Ready Task 1");
+        readyTask1.setStatus(TaskStatus.READY);
+        readyTask1.setFeatureId(incomplete1.getId());
+        taskRepository.save(readyTask1);
+
+        FeatureEntity incomplete2 = new FeatureEntity();
+        incomplete2.setTitle("Incomplete Feature 2");
+        incomplete2.setReadinessRatio(0.333);
+        featureRepository.save(incomplete2);
+
+        for (int t = 1; t <= 2; t++) {
+            Task task = new Task();
+            task.setTitle("Incomplete Feature 2 Resolved Task " + t);
+            task.setStatus(TaskStatus.RESOLVED);
+            task.setFeatureId(incomplete2.getId());
+            taskRepository.save(task);
+        }
+        for (int t = 1; t <= 4; t++) {
+            Task task = new Task();
+            task.setTitle("Incomplete Feature 2 Ready Task " + t);
+            task.setStatus(TaskStatus.READY);
+            task.setFeatureId(incomplete2.getId());
+            taskRepository.save(task);
+        }
+
+        // Assert initial state is exactly as described
+        assertThat(featureRepository.count()).isEqualTo(13);
+        long initialCompleteFeatures = featureRepository.findAll().stream()
+                .filter(f -> f.getReadinessRatio() >= 1.0 - 1e-9)
+                .count();
+        assertThat(initialCompleteFeatures).isEqualTo(11);
+
+        assertThat(taskRepository.count()).isEqualTo(47);
+        assertThat(taskRepository.findByStatus(TaskStatus.RESOLVED)).hasSize(40);
+        assertThat(taskRepository.findByStatus(TaskStatus.READY)).hasSize(5);
+        assertThat(taskRepository.findByStatus(TaskStatus.FAILED)).hasSize(2);
+
+        double initialReadiness = (double) taskRepository.findByStatus(TaskStatus.RESOLVED).size() / taskRepository.count();
+        assertThat(initialReadiness).isCloseTo(0.851, org.assertj.core.data.Offset.offset(0.001));
+        assertThat(initialReadiness).isLessThan(0.90); // Below 90% target!
+
+        // Act - Invoke resolve API
+        MvcResult mvcResult = mockMvc.perform(post("/api/v1/tasks/resolve"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Assert API Response
+        String jsonResponse = mvcResult.getResponse().getContentAsString();
+        Map<String, Object> responseMap = objectMapper.readValue(jsonResponse, Map.class);
+
+        int resolvedCount = (int) responseMap.get("resolvedCount");
+        // We resolved 5 READY tasks.
+        // 40 + 5 = 45 resolved out of 47 total tasks.
+        // 45 / 47 = 95.74% which is >= 90% threshold!
+        // Because readiness reached >= 90%, the remaining failed tasks (2 of them) are also resolved!
+        // So in total, 5 READY + 2 FAILED = 7 tasks are resolved!
+        assertThat(resolvedCount).isEqualTo(7);
+
+        double finalReadiness = ((Number) responseMap.get("readiness")).doubleValue();
+        assertThat(finalReadiness).isEqualTo(1.0); // All 47 resolved
+
+        // Verify DB State
+        assertThat(taskRepository.findByStatus(TaskStatus.RESOLVED)).hasSize(47);
+        assertThat(taskRepository.findByStatus(TaskStatus.READY)).isEmpty();
+        assertThat(taskRepository.findByStatus(TaskStatus.FAILED)).isEmpty();
+
+        // All 13 features should now be fully complete (readinessRatio = 1.0)
+        long finalCompleteFeatures = featureRepository.findAll().stream()
+                .filter(f -> f.getReadinessRatio() >= 1.0 - 1e-9)
+                .count();
+        assertThat(finalCompleteFeatures).isEqualTo(13);
     }
 }
