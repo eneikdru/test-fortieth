@@ -1,0 +1,34 @@
+{
+  "epics": [
+    {
+      "existingEpicId": "c0ebc3fb-e9c3-4809-84cd-e0b6d5007703",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "Reduce the number of failed tasks blocking falsification readiness to 0",
+      "tocConstraintRef": "falsification-readiness-pipeline-blocking",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: The system must successfully process the failed task 0cb354e9-1300-41a2-aed9-976415ca4262 to resolve it and unblock the pipeline."
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Resolve stuck task 0cb354e9-1300-41a2-aed9-976415ca4262 in falsification pipeline",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing the pipeline fix for this epic, I want to successfully process the specific stuck task, so that the falsification readiness check can complete without remaining failed tasks.",
+          "acceptanceCriteria": "Given a falsification readiness ratio of 90%\nWhen the pipeline evaluates task 0cb354e9-1300-41a2-aed9-976415ca4262\nThen the task must be transitioned to a resolved state without error",
+          "leanValue": "essential",
+          "cynefinDomain": "clear",
+          "tocConstraintRef": "task-resolution-logic",
+          "sixSigmaMetric": "Decrease pipeline error rate for task 0cb354e9-1300-41a2-aed9-976415ca4262 from 100% to 0%",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    }
+  ]
+}
