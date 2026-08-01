@@ -45,6 +45,20 @@ public class TaskService {
         }
         log.info("Resolved {} out of {} ready tasks.", resolvedCount, readyTasks.size());
 
+        List<Task> stalledTasks = taskRepository.findByStatus(TaskStatus.SYSTEM_STALLED);
+        int stalledResolvedCount = 0;
+        for (Task task : stalledTasks) {
+            int updated = taskRepository.updateStatusAtomically(task.getId(), TaskStatus.SYSTEM_STALLED, TaskStatus.RESOLVED);
+            if (updated > 0) {
+                stalledResolvedCount++;
+                if (task.getFeatureId() != null) {
+                    affectedFeatureIds.add(task.getFeatureId());
+                }
+            }
+        }
+        log.info("Resolved {} out of {} stalled tasks.", stalledResolvedCount, stalledTasks.size());
+        resolvedCount += stalledResolvedCount;
+
         List<Task> pendingReviewTasks = taskRepository.findByStatus(TaskStatus.PENDING_REVIEW);
         int pendingResolvedCount = 0;
         java.time.LocalDateTime fourHoursAgo = java.time.LocalDateTime.now().minusHours(4);

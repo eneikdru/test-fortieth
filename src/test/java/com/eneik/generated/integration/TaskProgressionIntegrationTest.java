@@ -460,4 +460,54 @@ public class TaskProgressionIntegrationTest {
         FeatureEntity updatedFeature = featureRepository.findById(feature.getId()).orElseThrow();
         assertThat(updatedFeature.getReadinessRatio()).isCloseTo(1.0, org.assertj.core.data.Offset.offset(1e-9));
     }
+
+    @Test
+    public void testStalledPipelineSystemStalledRecovery() throws Exception {
+        // Arrange
+        FeatureEntity feature = new FeatureEntity();
+        feature.setTitle("System Stalled Feature");
+        feature.setReadinessRatio(0.0);
+        featureRepository.save(feature);
+
+        // Setup 3 tasks in SYSTEM_STALLED status to match the evidence:
+        // "Flow Core state: SYSTEM_STALLED, 3 queued tasks remain idle, and no activity has occurred since the last cycle."
+        for (int i = 1; i <= 3; i++) {
+            Task t = new Task();
+            t.setTitle("Stalled Pipeline Task " + i);
+            t.setStatus(TaskStatus.SYSTEM_STALLED);
+            t.setFeatureId(feature.getId());
+            taskRepository.save(t);
+        }
+
+        // Verify initial state
+        assertThat(taskRepository.count()).isEqualTo(3);
+        assertThat(taskRepository.findByStatus(TaskStatus.SYSTEM_STALLED)).hasSize(3);
+        assertThat(taskRepository.findByStatus(TaskStatus.RESOLVED)).isEmpty();
+
+        // Act - Trigger resolution
+        MvcResult mvcResult = mockMvc.perform(post("/api/v1/tasks/resolve"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Assert API Response
+        String jsonResponse = mvcResult.getResponse().getContentAsString();
+        Map<String, Object> responseMap = objectMapper.readValue(jsonResponse, Map.class);
+
+        int resolvedCount = (int) responseMap.get("resolvedCount");
+        assertThat(resolvedCount).isEqualTo(3); // 3 stalled tasks resolved
+
+        double readiness = ((Number) responseMap.get("readiness")).doubleValue();
+        assertThat(readiness).isCloseTo(1.0, org.assertj.core.data.Offset.offset(1e-9));
+
+        // Verify task state in DB: all should be RESOLVED
+        List<Task> resolvedTasks = taskRepository.findByStatus(TaskStatus.RESOLVED);
+        assertThat(resolvedTasks).hasSize(3);
+
+        List<Task> stalledTasks = taskRepository.findByStatus(TaskStatus.SYSTEM_STALLED);
+        assertThat(stalledTasks).isEmpty();
+
+        // Verify feature readiness in DB: 3 resolved out of 3 total = 1.0
+        FeatureEntity updatedFeature = featureRepository.findById(feature.getId()).orElseThrow();
+        assertThat(updatedFeature.getReadinessRatio()).isCloseTo(1.0, org.assertj.core.data.Offset.offset(1e-9));
+    }
 }

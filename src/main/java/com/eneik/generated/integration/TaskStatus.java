@@ -4,5 +4,6 @@ public enum TaskStatus {
     READY,
     RESOLVED,
     FAILED,
-    PENDING_REVIEW
+    PENDING_REVIEW,
+    SYSTEM_STALLED
 }
