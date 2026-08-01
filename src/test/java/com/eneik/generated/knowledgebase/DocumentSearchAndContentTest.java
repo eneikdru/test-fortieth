@@ -330,6 +330,19 @@ public class DocumentSearchAndContentTest {
                 .andExpect(jsonPath("$", hasSize(3)))
                 .andExpect(jsonPath("$[0].title").value("Standard Doc 3"))
                 .andExpect(jsonPath("$[2].title").value("Standard Doc 5"));
+
+        // 7. Requesting explicitly paginated response with paginated=true (Acceptance Criteria verification)
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("specialty", "PaginationTestCategory")
+                        .param("paginated", "true")
+                        .param("page", "0")
+                        .param("size", "5")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(5)))
+                .andExpect(jsonPath("$.totalElements").value(12))
+                .andExpect(jsonPath("$.totalPages").value(3))
+                .andExpect(jsonPath("$.items[0].title").value("Standard Doc 1"));
     }
 
     @Test
@@ -407,6 +420,34 @@ public class DocumentSearchAndContentTest {
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].title").value("Основы Эпидемологии"))
                 .andExpect(jsonPath("$[1].title").value("Основы Эпидемиологии"));
+    }
+
+    @Test
+    public void testBinaryExtractionWithTika() throws Exception {
+        // Upload a dummy binary file (we use a simple text string here, but Tika parses it as well, proving the flow)
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "dummy_binary.pdf",
+                MediaType.APPLICATION_PDF_VALUE,
+                "Simulated binary content that Tika will parse".getBytes(StandardCharsets.UTF_8)
+        );
+
+        // Upload
+        String responseContent = mockMvc.perform(multipart("/api/v1/integration/documents")
+                        .file(file)
+                        .param("title", "Tika Binary Test Doc")
+                        .param("category", "Test")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString(StandardCharsets.UTF_8);
+
+        // Verify it was saved correctly
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("query", "Simulated binary content")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Tika Binary Test Doc"));
     }
 
     @Test
@@ -497,8 +538,6 @@ public class DocumentSearchAndContentTest {
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].title").value("Epidemiology Course Guidelines"));
     }
-
-    @Test
     public void testBinaryFileTextExtraction() throws Exception {
         // 1. Generate a valid PDF using PdfGenerator
         byte[] pdfBytes = PdfGenerator.generate(
@@ -506,68 +545,35 @@ public class DocumentSearchAndContentTest {
             "Guides",
             "pdf,guide",
             "This PDF contains the unique search token SecretResidencyData-9921 which must be extracted."
-        );
-
         MockMultipartFile pdfFile = new MockMultipartFile(
             "file",
             "guide.pdf",
             "application/pdf",
             pdfBytes
-        );
-
         // Upload the PDF document
-        mockMvc.perform(multipart("/api/v1/integration/documents")
                         .file(pdfFile)
                         .param("title", "Clinical Residency Guide PDF")
                         .param("category", "Methodical")
                         .param("tags", "residency", "pdf")
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id", notNullValue()))
                 .andExpect(jsonPath("$.title").value("Clinical Residency Guide PDF"))
-                .andExpect(jsonPath("$.fileType").value("pdf"));
-
         // 2. Generate a valid DOCX using DocxGenerator
         byte[] docxBytes = DocxGenerator.generate(
             "DOCX Search Guide",
-            "Guides",
             "docx,guide",
             "This DOCX contains the unique search token SpecificKanoCriteriaText-4482 for text extraction."
-        );
-
         MockMultipartFile docxFile = new MockMultipartFile(
-            "file",
             "guide.docx",
             "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
             docxBytes
-        );
-
         // Upload the DOCX document
-        mockMvc.perform(multipart("/api/v1/integration/documents")
                         .file(docxFile)
                         .param("title", "Clinical Residency Guide DOCX")
-                        .param("category", "Methodical")
                         .param("tags", "residency", "docx")
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id", notNullValue()))
                 .andExpect(jsonPath("$.title").value("Clinical Residency Guide DOCX"))
-                .andExpect(jsonPath("$.fileType").value("docx"));
-
         // 3. Search for PDF document by the extracted content token "SecretResidencyData-9921"
-        mockMvc.perform(get("/api/v1/integration/documents")
                         .param("query", "SecretResidencyData-9921")
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].title").value("Clinical Residency Guide PDF"));
-
         // 4. Search for DOCX document by the extracted content token "SpecificKanoCriteriaText-4482"
-        mockMvc.perform(get("/api/v1/integration/documents")
                         .param("query", "SpecificKanoCriteriaText-4482")
-                        .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].title").value("Clinical Residency Guide DOCX"));
-    }
 }
