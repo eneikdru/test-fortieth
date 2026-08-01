@@ -1,0 +1,13 @@
+{
+  "verdicts": [
+    {
+      "sourceIndex": 0,
+      "verdict": "approve",
+      "criticalReason": "",
+      "concerns": [
+        "A new Tika instance is instantiated on every call to extractText instead of reusing a single static/bean instance, which can cause overhead.",
+        "Exceptions during Apache Tika extraction are caught silently without logging, making troubleshooting difficult if text extraction fails."
+      ]
+    }
+  ]
+}
