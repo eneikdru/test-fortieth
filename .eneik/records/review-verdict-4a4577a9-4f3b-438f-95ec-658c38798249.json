@@ -1,0 +1,12 @@
+{
+  "verdicts": [
+    {
+      "sourceIndex": 0,
+      "verdict": "approve",
+      "criticalReason": "",
+      "concerns": [
+        "The new config parameter tasks.falsification.readiness-threshold is introduced without documentation or addition to the default application properties files. Consider documenting it."
+      ]
+    }
+  ]
+}
