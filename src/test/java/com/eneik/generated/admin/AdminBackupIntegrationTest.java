@@ -120,7 +120,7 @@ public class AdminBackupIntegrationTest {
     @Test
     public void testTriggerBackupUnauthorizedWithoutJwt() throws Exception {
         mockMvc.perform(post("/api/v1/admin/backup")
-                        .header("X-User-Role", "ADMINISTRATOR") // Role spoofing check
+                        .header("X-Moodle-Role", "ADMINISTRATOR") // Role spoofing check
                         .header("X-User-Name", "hacker")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized());

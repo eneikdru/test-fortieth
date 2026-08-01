@@ -68,7 +68,7 @@ public class AdminBackupController {
 
         boolean hasSpoofingHeader = false;
         if (request != null) {
-            String xRole = request.getHeader("X-User-Role");
+            String xRole = request.getHeader("X-Moodle-Role");
             String xName = request.getHeader("X-User-Name");
             if ((xRole != null && !xRole.trim().isEmpty()) || (xName != null && !xName.trim().isEmpty())) {
                 hasSpoofingHeader = true;
@@ -115,7 +115,7 @@ public class AdminBackupController {
     @PostMapping("/backup")
     public BackupResponse triggerBackup(
             @RequestHeader(value = "X-User-Name", required = false) String usernameHeader,
-            @RequestHeader(value = "X-User-Role", required = false) String roleHeader) {
+            @RequestHeader(value = "X-Moodle-Role", required = false) String roleHeader) {
 
         KbUser systemUser = resolveUser(usernameHeader, roleHeader);
         if (!"ADMINISTRATOR".equals(systemUser.getRole().trim().toUpperCase())) {

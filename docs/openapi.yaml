@@ -23,6 +23,39 @@ security:
   - bearerAuth: []
 
 paths:
+  /admin/backup:
+    post:
+      summary: Trigger system backup
+      description: Creates and securely stores a snapshot of the database and uploaded files. Only available to ADMINISTRATORs.
+      operationId: triggerBackup
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: X-User-Name
+          in: header
+          description: Optional spoofing or identity header for username
+          required: false
+          schema:
+            type: string
+        - name: X-Moodle-Role
+          in: header
+          description: The Moodle role of the user requesting the backup. Must be ADMINISTRATOR.
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Successfully triggered and completed the backup
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BackupResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "403":
+          $ref: "#/components/responses/ForbiddenError"
+        "500":
+          $ref: "#/components/responses/InternalServerError"
   /lms-metadata:
     get:
       summary: Retrieve all synchronized LMS metadata entries
@@ -394,6 +427,35 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    BackupResponse:
+      type: object
+      required:
+        - status
+        - backupFile
+        - backupPath
+        - databaseBackupSize
+        - storageBackupSize
+        - totalBackupSize
+        - timestamp
+      properties:
+        status:
+          type: string
+        backupFile:
+          type: string
+        backupPath:
+          type: string
+        databaseBackupSize:
+          type: integer
+          format: int64
+        storageBackupSize:
+          type: integer
+          format: int64
+        totalBackupSize:
+          type: integer
+          format: int64
+        timestamp:
+          type: string
+          format: date-time
     LmsMetadata:
       type: object
       required:
