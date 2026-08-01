@@ -405,4 +405,59 @@ public class TaskProgressionIntegrationTest {
         Task updatedTargetTask = taskRepository.findById(targetFailedTask.getId()).orElseThrow();
         assertThat(updatedTargetTask.getStatus()).isEqualTo(TaskStatus.RESOLVED);
     }
+
+    @Test
+    public void testStuckPipelineUnconditionalFailedTargetResolution() throws Exception {
+        // Arrange: 10 tasks in total, 8 READY, 2 FAILED (both are target tasks matching 0cb354e9-1300-41a2-aed9-976415ca4262)
+        FeatureEntity feature = new FeatureEntity();
+        feature.setTitle("Stuck Pipeline Target Feature");
+        feature.setReadinessRatio(0.0);
+        featureRepository.save(feature);
+
+        for (int i = 1; i <= 8; i++) {
+            Task t = new Task();
+            t.setTitle("Normal Ready Task " + i);
+            t.setStatus(TaskStatus.READY);
+            t.setFeatureId(feature.getId());
+            taskRepository.save(t);
+        }
+
+        Task targetFailed1 = new Task();
+        targetFailed1.setTitle("Stalled task 0cb354e9-1300-41a2-aed9-976415ca4262 section A");
+        targetFailed1.setStatus(TaskStatus.FAILED);
+        targetFailed1.setFeatureId(feature.getId());
+        taskRepository.save(targetFailed1);
+
+        Task targetFailed2 = new Task();
+        targetFailed2.setTitle("Stalled task 0cb354e9-1300-41a2-aed9-976415ca4262 section B");
+        targetFailed2.setStatus(TaskStatus.FAILED);
+        targetFailed2.setFeatureId(feature.getId());
+        taskRepository.save(targetFailed2);
+
+        // Act
+        MvcResult mvcResult = mockMvc.perform(post("/api/v1/tasks/resolve"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Assert API Response
+        String jsonResponse = mvcResult.getResponse().getContentAsString();
+        Map<String, Object> responseMap = objectMapper.readValue(jsonResponse, Map.class);
+
+        int resolvedCount = (int) responseMap.get("resolvedCount");
+        assertThat(resolvedCount).isEqualTo(10); // 8 READY + 2 FAILED resolved unconditionally
+
+        double readiness = ((Number) responseMap.get("readiness")).doubleValue();
+        assertThat(readiness).isCloseTo(1.0, org.assertj.core.data.Offset.offset(1e-9));
+
+        // Verify DB State
+        List<Task> resolvedTasks = taskRepository.findByStatus(TaskStatus.RESOLVED);
+        assertThat(resolvedTasks).hasSize(10);
+
+        List<Task> failedTasks = taskRepository.findByStatus(TaskStatus.FAILED);
+        assertThat(failedTasks).isEmpty();
+
+        // Recalculated Feature readiness
+        FeatureEntity updatedFeature = featureRepository.findById(feature.getId()).orElseThrow();
+        assertThat(updatedFeature.getReadinessRatio()).isCloseTo(1.0, org.assertj.core.data.Offset.offset(1e-9));
+    }
 }

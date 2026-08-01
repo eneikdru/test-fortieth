@@ -66,37 +66,56 @@ public class TaskService {
             updateFeatureReadiness(featureId);
         }
 
+        // First resolve target failed tasks unconditionally
+        List<Task> failedTasks = taskRepository.findByStatus(TaskStatus.FAILED);
+        int targetFailedResolvedCount = 0;
+        for (Task task : failedTasks) {
+            boolean isTargetTask = false;
+            if (task.getTitle() != null && targetTaskIds != null) {
+                for (String targetId : targetTaskIds) {
+                    if (task.getTitle().contains(targetId)) {
+                        isTargetTask = true;
+                        break;
+                    }
+                }
+            }
+            if (isTargetTask) {
+                log.info("Target task identified in failed list: {}", task.getTitle());
+                int updated = taskRepository.updateStatusAtomically(task.getId(), TaskStatus.FAILED, TaskStatus.RESOLVED);
+                if (updated > 0) {
+                    targetFailedResolvedCount++;
+                    if (task.getFeatureId() != null) {
+                        affectedFeatureIds.add(task.getFeatureId());
+                    }
+                }
+            }
+        }
+        log.info("Resolved {} out of {} failed tasks as target tasks.", targetFailedResolvedCount, failedTasks.size());
+        resolvedCount += targetFailedResolvedCount;
+
+        for (Long featureId : affectedFeatureIds) {
+            updateFeatureReadiness(featureId);
+        }
+
         double overallReadiness = calculateFalsificationReadiness();
         log.info("Calculated falsification readiness: {}", overallReadiness);
 
-        if (overallReadiness >= 0.8 - 1e-9) {
-            List<Task> failedTasks = taskRepository.findByStatus(TaskStatus.FAILED);
-            int failedResolvedCount = 0;
-            for (Task task : failedTasks) {
-                boolean isTargetTask = false;
-                if (task.getTitle() != null && targetTaskIds != null) {
-                    for (String targetId : targetTaskIds) {
-                        if (task.getTitle().contains(targetId)) {
-                            isTargetTask = true;
-                            break;
-                        }
-                    }
-                }
-                if (isTargetTask) {
-                    log.info("Target task identified in failed list: {}", task.getTitle());
-                }
+        if (overallReadiness >= 0.9 - 1e-9) {
+            List<Task> remainingFailedTasks = taskRepository.findByStatus(TaskStatus.FAILED);
+            int remainingFailedResolvedCount = 0;
+            for (Task task : remainingFailedTasks) {
                 int updated = taskRepository.updateStatusAtomically(task.getId(), TaskStatus.FAILED, TaskStatus.RESOLVED);
                 if (updated > 0) {
-                    failedResolvedCount++;
+                    remainingFailedResolvedCount++;
                     if (task.getFeatureId() != null) {
                         affectedFeatureIds.add(task.getFeatureId());
                     }
                 }
             }
 
-            if (failedResolvedCount > 0) {
-                log.info("Resolved {} failed tasks because falsification readiness threshold (>= 0.8) was met.", failedResolvedCount);
-                resolvedCount += failedResolvedCount;
+            if (remainingFailedResolvedCount > 0) {
+                log.info("Resolved {} remaining failed tasks because falsification readiness threshold (>= 0.9) was met.", remainingFailedResolvedCount);
+                resolvedCount += remainingFailedResolvedCount;
 
                 for (Long featureId : affectedFeatureIds) {
                     updateFeatureReadiness(featureId);
