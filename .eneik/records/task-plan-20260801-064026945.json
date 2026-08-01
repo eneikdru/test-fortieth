@@ -1,0 +1,51 @@
+{
+  "epics": [
+    {
+      "existingEpicId": "c0ebc3fb-e9c3-4809-84cd-e0b6d5007703",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "Increase falsification readiness score from 85% to at least 90%",
+      "tocConstraintRef": "Stalled tasks queue in the project pipeline",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: Patch the existing task processing logic to successfully clear the 5 queued and 2 failed tasks.",
+        "R2: Ensure the falsification readiness score correctly updates to reach or exceed the 90% target."
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Patch stalled task processing logic",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing the pipeline fix for this epic, I want to patch the existing task processing logic to resolve stalled tasks, so that the project cycle can finish successfully.",
+          "acceptanceCriteria": "Given a pipeline stuck with queued and failed tasks, When the updated task processing logic is executed, Then all queued and failed tasks successfully transition to a resolved state.\nGiven the tasks are resolved, When the falsification readiness is recalculated, Then the readiness score accurately reflects a value of 90% or higher.",
+          "leanValue": "essential",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "Task processing logic execution bottleneck",
+          "sixSigmaMetric": "Reduce queued and failed task count to 0 in the pipeline",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1",
+            "R2"
+          ]
+        },
+        {
+          "title": "Verify pipeline fix and readiness update",
+          "roleTag": "BARCAN-TAG-06",
+          "jtbd": "When implementing QA for this epic, I want to write unit and integration tests for the task resolution logic, so that the project cycle can finish successfully.",
+          "acceptanceCriteria": "Given the patched task processing logic, When unit tests are executed, Then the pure logic for task resolution passes.\nGiven the integrated backend API and database, When integration tests process stalled tasks, Then the database state correctly reflects resolved tasks and readiness >= 90%.",
+          "leanValue": "essential",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "Test coverage and automation for pipeline task resolution",
+          "sixSigmaMetric": "Achieve 100% test pass rate for task processing and readiness calculation across all layers",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1",
+            "R2"
+          ]
+        }
+      ]
+    }
+  ]
+}
