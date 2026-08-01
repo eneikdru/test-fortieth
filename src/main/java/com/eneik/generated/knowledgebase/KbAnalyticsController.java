@@ -6,6 +6,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import com.eneik.generated.integration.EiosClient;
 
 import java.io.ByteArrayOutputStream;
@@ -153,78 +155,62 @@ public class KbAnalyticsController {
 
     @GetMapping("/statistics")
     public AnalyticsStatistics getAnalyticsStatistics() {
-        List<KbAuditLog> allLogs = auditLogRepository.findAll();
+        Pageable topTen = PageRequest.of(0, 10);
 
         // 1. Calculate popularSearches
-        Map<String, Long> searchCounts = allLogs.stream()
-            .filter(log -> "SEARCH".equalsIgnoreCase(log.getAction()))
-            .filter(log -> log.getDetails() != null && !log.getDetails().trim().isEmpty())
-            .collect(Collectors.groupingBy(log -> log.getDetails().trim(), Collectors.counting()));
-
-        List<SearchQueryStats> popularSearches = searchCounts.entrySet().stream()
-            .map(entry -> new SearchQueryStats(entry.getKey(), entry.getValue().intValue()))
-            .sorted(Comparator.comparing(SearchQueryStats::getCount).reversed())
-            .limit(10)
+        List<KbAuditLogRepository.SearchQueryProjection> searches = auditLogRepository.findPopularSearches(topTen);
+        List<SearchQueryStats> popularSearches = searches.stream()
+            .map(p -> new SearchQueryStats(p.getQuery(), p.getCount().intValue()))
             .collect(Collectors.toList());
-
-        // Cache document titles to avoid redundant DB queries
-        Map<Long, String> docTitles = documentRepository.findAll().stream()
-            .collect(Collectors.toMap(KbDocument::getId, KbDocument::getTitle, (a, b) -> a));
 
         // 2. Calculate topViewedDocuments
-        Map<Long, Long> viewCounts = allLogs.stream()
-            .filter(log -> "VIEW".equalsIgnoreCase(log.getAction()))
-            .filter(log -> "KbDocument".equalsIgnoreCase(log.getTargetEntity()))
-            .filter(log -> log.getTargetId() != null)
-            .collect(Collectors.groupingBy(KbAuditLog::getTargetId, Collectors.counting()));
-
-        List<DocumentStats> topViewedDocuments = viewCounts.entrySet().stream()
-            .map(entry -> {
-                Long docId = entry.getKey();
-                String title = docTitles.getOrDefault(docId, entry.getValue() != null ? "Unknown Document" : "");
-                // Fallback to log details if title not found in current documents
-                if ("Unknown Document".equals(title)) {
-                    // Try to find a log for this targetId that has details
-                    String loggedTitle = allLogs.stream()
-                        .filter(l -> docId.equals(l.getTargetId()) && l.getDetails() != null)
-                        .map(KbAuditLog::getDetails)
-                        .findFirst()
-                        .orElse("Unknown Document");
-                    title = loggedTitle;
-                }
-                return new DocumentStats(docId, title, entry.getValue().intValue());
-            })
-            .sorted(Comparator.comparing(DocumentStats::getCount).reversed())
-            .limit(10)
-            .collect(Collectors.toList());
+        List<KbAuditLogRepository.DocumentStatsProjection> viewed = auditLogRepository.findTopViewedDocuments(topTen);
 
         // 3. Calculate topDownloadedDocuments
-        Map<Long, Long> downloadCounts = allLogs.stream()
-            .filter(log -> "DOWNLOAD".equalsIgnoreCase(log.getAction()))
-            .filter(log -> "KbDocument".equalsIgnoreCase(log.getTargetEntity()))
-            .filter(log -> log.getTargetId() != null)
-            .collect(Collectors.groupingBy(KbAuditLog::getTargetId, Collectors.counting()));
+        List<KbAuditLogRepository.DocumentStatsProjection> downloaded = auditLogRepository.findTopDownloadedDocuments(topTen);
 
-        List<DocumentStats> topDownloadedDocuments = downloadCounts.entrySet().stream()
-            .map(entry -> {
-                Long docId = entry.getKey();
-                String title = docTitles.getOrDefault(docId, "Unknown Document");
-                if ("Unknown Document".equals(title)) {
-                    String loggedTitle = allLogs.stream()
-                        .filter(l -> docId.equals(l.getTargetId()) && l.getDetails() != null)
-                        .map(KbAuditLog::getDetails)
-                        .findFirst()
-                        .orElse("Unknown Document");
-                    // Strip version info from download details if present (e.g. "Title (v1)" -> "Title")
+        // Fetch titles only for the needed document IDs
+        Set<Long> neededDocIds = new HashSet<>();
+        for (KbAuditLogRepository.DocumentStatsProjection p : viewed) {
+            neededDocIds.add(p.getTargetId());
+        }
+        for (KbAuditLogRepository.DocumentStatsProjection p : downloaded) {
+            neededDocIds.add(p.getTargetId());
+        }
+
+        Map<Long, String> docTitles = new HashMap<>();
+        if (!neededDocIds.isEmpty()) {
+            documentRepository.findAllById(neededDocIds).forEach(doc -> {
+                docTitles.put(doc.getId(), doc.getTitle());
+            });
+        }
+
+        List<DocumentStats> topViewedDocuments = viewed.stream()
+            .map(p -> {
+                Long docId = p.getTargetId();
+                String title = docTitles.get(docId);
+                if (title == null) {
+                    List<String> details = auditLogRepository.findFirstDetailsByTargetId(docId, PageRequest.of(0, 1));
+                    title = details.isEmpty() ? "Unknown Document" : details.get(0);
+                }
+                return new DocumentStats(docId, title, p.getCount().intValue());
+            })
+            .collect(Collectors.toList());
+
+        List<DocumentStats> topDownloadedDocuments = downloaded.stream()
+            .map(p -> {
+                Long docId = p.getTargetId();
+                String title = docTitles.get(docId);
+                if (title == null) {
+                    List<String> details = auditLogRepository.findFirstDetailsByTargetId(docId, PageRequest.of(0, 1));
+                    String loggedTitle = details.isEmpty() ? "Unknown Document" : details.get(0);
                     if (loggedTitle.contains(" (v")) {
                         loggedTitle = loggedTitle.substring(0, loggedTitle.lastIndexOf(" (v"));
                     }
                     title = loggedTitle;
                 }
-                return new DocumentStats(docId, title, entry.getValue().intValue());
+                return new DocumentStats(docId, title, p.getCount().intValue());
             })
-            .sorted(Comparator.comparing(DocumentStats::getCount).reversed())
-            .limit(10)
             .collect(Collectors.toList());
 
         return new AnalyticsStatistics(popularSearches, topViewedDocuments, topDownloadedDocuments);
