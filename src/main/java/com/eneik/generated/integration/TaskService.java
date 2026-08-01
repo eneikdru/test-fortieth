@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashSet;
@@ -127,6 +128,34 @@ public class TaskService {
 
         long resolvedTasks = taskRepository.countByStatus(TaskStatus.RESOLVED);
         return (double) resolvedTasks / totalTasks;
+    }
+
+    public String getFlowCoreState() {
+        long readyCount = taskRepository.countByStatus(TaskStatus.READY);
+        if (readyCount > 0) {
+            return "SYSTEM_STALLED";
+        }
+        long totalTasks = taskRepository.count();
+        if (totalTasks == 0) {
+            return "COMPLETED";
+        }
+        long resolvedTasks = taskRepository.countByStatus(TaskStatus.RESOLVED);
+        if (resolvedTasks == totalTasks) {
+            return "COMPLETED";
+        }
+        return "RUNNING";
+    }
+
+    @Scheduled(fixedRateString = "${tasks.evaluation.interval-ms:60000}")
+    @Transactional
+    public void evaluateAndResumeIfStalled() {
+        log.info("Evaluating system state...");
+        String state = getFlowCoreState();
+        log.info("Current Flow Core state: {}", state);
+        if ("SYSTEM_STALLED".equals(state)) {
+            log.info("System is STALLED with queued tasks. Resuming processing...");
+            resolveTasksAndCalculateReadiness();
+        }
     }
 
     public static class TaskResolutionResult {

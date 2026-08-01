@@ -284,4 +284,105 @@ public class TaskServiceUnitTest {
         verify(featureRepository, atLeastOnce()).updateReadinessAtomically(10L, 1.0);
         verify(featureRepository, atLeastOnce()).updateReadinessAtomically(11L, 1.0);
     }
+
+    @Test
+    public void testGetFlowCoreStateWhenReadyTasksExist() {
+        // Arrange: tasks exist with status READY
+        when(taskRepository.countByStatus(TaskStatus.READY)).thenReturn(3L);
+
+        // Act
+        String state = taskService.getFlowCoreState();
+
+        // Assert
+        assertThat(state).isEqualTo("SYSTEM_STALLED");
+    }
+
+    @Test
+    public void testGetFlowCoreStateWhenNoTasksExist() {
+        // Arrange
+        when(taskRepository.countByStatus(TaskStatus.READY)).thenReturn(0L);
+        when(taskRepository.count()).thenReturn(0L);
+
+        // Act
+        String state = taskService.getFlowCoreState();
+
+        // Assert
+        assertThat(state).isEqualTo("COMPLETED");
+    }
+
+    @Test
+    public void testGetFlowCoreStateWhenAllTasksResolved() {
+        // Arrange
+        when(taskRepository.countByStatus(TaskStatus.READY)).thenReturn(0L);
+        when(taskRepository.count()).thenReturn(10L);
+        when(taskRepository.countByStatus(TaskStatus.RESOLVED)).thenReturn(10L);
+
+        // Act
+        String state = taskService.getFlowCoreState();
+
+        // Assert
+        assertThat(state).isEqualTo("COMPLETED");
+    }
+
+    @Test
+    public void testGetFlowCoreStateWhenSomeTasksRunning() {
+        // Arrange: some tasks are neither READY nor RESOLVED (e.g. FAILED or PENDING_REVIEW)
+        when(taskRepository.countByStatus(TaskStatus.READY)).thenReturn(0L);
+        when(taskRepository.count()).thenReturn(10L);
+        when(taskRepository.countByStatus(TaskStatus.RESOLVED)).thenReturn(8L);
+
+        // Act
+        String state = taskService.getFlowCoreState();
+
+        // Assert
+        assertThat(state).isEqualTo("RUNNING");
+    }
+
+    @Test
+    public void testEvaluateAndResumeIfStalledTriggersResolution() {
+        // Arrange: mock getFlowCoreState to return SYSTEM_STALLED by setting count of READY tasks > 0
+        when(taskRepository.countByStatus(TaskStatus.READY)).thenReturn(3L);
+
+        // Mock resolve tasks dependencies
+        List<Task> readyTasks = new ArrayList<>();
+        Task task = new Task();
+        task.setId(101L);
+        task.setStatus(TaskStatus.READY);
+        task.setFeatureId(1L);
+        readyTasks.add(task);
+        when(taskRepository.findByStatus(TaskStatus.READY)).thenReturn(readyTasks);
+        when(taskRepository.findByStatus(TaskStatus.PENDING_REVIEW)).thenReturn(Collections.emptyList());
+        when(taskRepository.findByStatus(TaskStatus.FAILED)).thenReturn(Collections.emptyList());
+        when(taskRepository.updateStatusAtomically(101L, TaskStatus.READY, TaskStatus.RESOLVED)).thenReturn(1);
+        when(taskRepository.countByFeatureId(1L)).thenReturn(1L);
+        when(taskRepository.countByFeatureIdAndStatus(1L, TaskStatus.RESOLVED)).thenReturn(1L);
+        when(taskRepository.count()).thenReturn(1L);
+        when(taskRepository.countByStatus(TaskStatus.RESOLVED)).thenReturn(1L);
+
+        FeatureEntity feature = new FeatureEntity();
+        feature.setId(1L);
+        feature.setTitle("Feature 1");
+        feature.setReadinessRatio(0.0);
+        when(featureRepository.findById(1L)).thenReturn(Optional.of(feature));
+
+        // Act
+        taskService.evaluateAndResumeIfStalled();
+
+        // Assert
+        verify(taskRepository, atLeastOnce()).updateStatusAtomically(101L, TaskStatus.READY, TaskStatus.RESOLVED);
+    }
+
+    @Test
+    public void testEvaluateAndResumeIfStalledDoesNotTriggerResolutionWhenNotStalled() {
+        // Arrange: mock getFlowCoreState to return RUNNING
+        when(taskRepository.countByStatus(TaskStatus.READY)).thenReturn(0L);
+        when(taskRepository.count()).thenReturn(10L);
+        when(taskRepository.countByStatus(TaskStatus.RESOLVED)).thenReturn(8L);
+
+        // Act
+        taskService.evaluateAndResumeIfStalled();
+
+        // Assert: make sure findByStatus(READY) or findByStatus(FAILED) are never called (no resolution triggered)
+        verify(taskRepository, never()).findByStatus(any());
+    }
 }
