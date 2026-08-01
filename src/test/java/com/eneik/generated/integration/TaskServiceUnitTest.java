@@ -160,4 +160,48 @@ public class TaskServiceUnitTest {
         verify(taskRepository).updateStatusAtomically(301L, TaskStatus.FAILED, TaskStatus.RESOLVED);
         verify(featureRepository, times(1)).updateReadinessAtomically(3L, 1.0);
     }
+
+    @Test
+    public void testUnconditionalFailedAndReadyResolution() {
+        // Arrange
+        Task readyTask = new Task();
+        readyTask.setId(401L);
+        readyTask.setTitle("Ready Task");
+        readyTask.setStatus(TaskStatus.READY);
+        readyTask.setFeatureId(4L);
+
+        Task failedTask = new Task();
+        failedTask.setId(402L);
+        failedTask.setTitle("Normal Failed Task");
+        failedTask.setStatus(TaskStatus.FAILED);
+        failedTask.setFeatureId(4L);
+
+        when(taskRepository.findByStatus(TaskStatus.READY)).thenReturn(Collections.singletonList(readyTask));
+        when(taskRepository.findByStatus(TaskStatus.PENDING_REVIEW)).thenReturn(Collections.emptyList());
+        when(taskRepository.findByStatus(TaskStatus.FAILED)).thenReturn(Collections.singletonList(failedTask));
+        when(taskRepository.count()).thenReturn(2L);
+        when(taskRepository.countByStatus(TaskStatus.RESOLVED)).thenReturn(2L);
+
+        FeatureEntity feature = new FeatureEntity();
+        feature.setId(4L);
+        feature.setTitle("Feature 4");
+        feature.setReadinessRatio(0.0);
+        when(featureRepository.findById(4L)).thenReturn(Optional.of(feature));
+
+        when(taskRepository.updateStatusAtomically(401L, TaskStatus.READY, TaskStatus.RESOLVED)).thenReturn(1);
+        when(taskRepository.updateStatusAtomically(402L, TaskStatus.FAILED, TaskStatus.RESOLVED)).thenReturn(1);
+        when(taskRepository.countByFeatureId(4L)).thenReturn(2L);
+        when(taskRepository.countByFeatureIdAndStatus(4L, TaskStatus.RESOLVED)).thenReturn(2L);
+
+        // Act
+        TaskService.TaskResolutionResult result = taskService.resolveTasksAndCalculateReadiness();
+
+        // Assert
+        assertThat(result.getResolvedCount()).isEqualTo(2);
+        assertThat(result.getReadiness()).isEqualTo(1.0);
+
+        verify(taskRepository).updateStatusAtomically(401L, TaskStatus.READY, TaskStatus.RESOLVED);
+        verify(taskRepository).updateStatusAtomically(402L, TaskStatus.FAILED, TaskStatus.RESOLVED);
+        verify(featureRepository, times(2)).updateReadinessAtomically(4L, 1.0);
+    }
 }
