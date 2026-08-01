@@ -1,0 +1,34 @@
+{
+  "epics": [
+    {
+      "existingEpicId": "c0ebc3fb-e9c3-4809-84cd-e0b6d5007703",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "Reduce pipeline failure rate due to unhandled falsification readiness threshold tasks to 0%",
+      "tocConstraintRef": "Project cycle finalization phase bottleneck",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: Patch the task processing logic to handle the resolution of failed task 0cb354e9-1300-41a2-aed9-976415ca4262 when falsification readiness is at 90%"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Resolve failed falsification task 0cb354e9",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing the task resolution fix for this epic, I want to patch the state handling, so that the pipeline unblocks the stuck task.",
+          "acceptanceCriteria": "Given the pipeline processes project tasks, When taskId=0cb354e9-1300-41a2-aed9-976415ca4262 is evaluated at 90% readiness, Then it transitions to a resolved status without errors.\nGiven the updated task resolution logic, When executed, Then it correctly utilizes existing data schemas and API contracts without adding new endpoints.",
+          "leanValue": "essential",
+          "cynefinDomain": "clear",
+          "tocConstraintRef": "Task state update transaction layer",
+          "sixSigmaMetric": "Reduce task resolution exceptions for taskId 0cb354e9-1300-41a2-aed9-976415ca4262 from 1 to 0",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    }
+  ]
+}
