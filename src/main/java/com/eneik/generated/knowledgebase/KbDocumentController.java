@@ -2,7 +2,6 @@ package com.eneik.generated.knowledgebase;
 
 import com.eneik.generated.integration.LmsMetadata;
 import com.eneik.generated.integration.LmsMetadataRepository;
-import org.apache.tika.Tika;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -15,10 +14,13 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import org.apache.tika.Tika;
+import org.apache.tika.exception.TikaException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -509,7 +511,8 @@ public class KbDocumentController {
     }
 
     @GetMapping
-    public List<DocumentResponse> searchDocuments(
+    public Object searchDocuments(
+            @RequestParam(required = false) Boolean paginated,
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String documentType,
             @RequestParam(required = false) String specialty,
@@ -818,31 +821,18 @@ public class KbDocumentController {
         }
 
         int end = Math.min(start + limitVal, results.size());
-        if (start > results.size()) {
-            return Collections.emptyList();
+        List<DocumentResponse> slicedItems = Collections.emptyList();
+        if (start <= results.size()) {
+            slicedItems = results.subList(start, end);
         }
 
-        return results.subList(start, end);
-    }
+        if (Boolean.TRUE.equals(paginated)) {
+            long totalElements = results.size();
+            long totalPages = (long) Math.ceil((double) totalElements / limitVal);
+            return new PaginatedResponse(slicedItems, totalElements, totalPages);
+        }
 
-    private String extractText(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            return "";
-        }
-        try (java.io.InputStream is = file.getInputStream()) {
-            Tika tika = new Tika();
-            String content = tika.parseToString(is);
-            if (content != null && !content.trim().isEmpty()) {
-                return content;
-            }
-        } catch (Exception e) {
-            // Optional fallback
-        }
-        try {
-            return new String(file.getBytes(), StandardCharsets.UTF_8);
-        } catch (Exception e) {
-            return "";
-        }
+        return slicedItems;
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -894,7 +884,13 @@ public class KbDocumentController {
             Path filePath = Paths.get(STORAGE_DIR, uniqueFilename);
             Files.write(filePath, file.getBytes());
 
-            String extractedContent = extractText(file);
+            String extractedContent;
+            try (InputStream is = file.getInputStream()) {
+                Tika tika = new Tika();
+                extractedContent = tika.parseToString(is);
+            } catch (TikaException e) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to parse document content", e);
+            }
 
             // 3. Create document version
             KbDocumentVersion version = new KbDocumentVersion();
@@ -984,7 +980,13 @@ public class KbDocumentController {
                 Path filePath = Paths.get(STORAGE_DIR, uniqueFilename);
                 Files.write(filePath, file.getBytes());
 
-                String extractedContent = extractText(file);
+                String extractedContent;
+                try (InputStream is = file.getInputStream()) {
+                    Tika tika = new Tika();
+                    extractedContent = tika.parseToString(is);
+                } catch (TikaException e) {
+                    throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to parse updated document content", e);
+                }
 
                 KbDocumentVersion version = new KbDocumentVersion();
                 version.setDocument(doc);
@@ -1328,4 +1330,40 @@ public class KbDocumentController {
         public String getCreatedAt() { return createdAt; }
         public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
     }
+
+    public static class PaginatedResponse {
+        private List<DocumentResponse> items;
+        private long totalElements;
+        private long totalPages;
+
+        public PaginatedResponse(List<DocumentResponse> items, long totalElements, long totalPages) {
+            this.items = items;
+            this.totalElements = totalElements;
+            this.totalPages = totalPages;
+        }
+
+        public List<DocumentResponse> getItems() { return items; }
+        public void setItems(List<DocumentResponse> items) { this.items = items; }
+
+        public long getTotalElements() { return totalElements; }
+        public void setTotalElements(long totalElements) { this.totalElements = totalElements; }
+
+        public long getTotalPages() { return totalPages; }
+        public void setTotalPages(long totalPages) { this.totalPages = totalPages; }
+    }
+    public List<DocumentResponse> searchDocuments(
+        if (start > results.size()) {
+        return results.subList(start, end);
+    private String extractText(MultipartFile file) {
+            return "";
+        try (java.io.InputStream is = file.getInputStream()) {
+            Tika tika = new Tika();
+            String content = tika.parseToString(is);
+            if (content != null && !content.trim().isEmpty()) {
+                return content;
+        } catch (Exception e) {
+            // Optional fallback
+            return new String(file.getBytes(), StandardCharsets.UTF_8);
+            String extractedContent = extractText(file);
+                String extractedContent = extractText(file);
 }
