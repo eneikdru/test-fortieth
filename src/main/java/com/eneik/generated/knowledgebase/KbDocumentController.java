@@ -508,7 +508,8 @@ public class KbDocumentController {
     }
 
     @GetMapping
-    public List<DocumentResponse> searchDocuments(
+    public Object searchDocuments(
+            @RequestParam(required = false) Boolean paginated,
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String documentType,
             @RequestParam(required = false) String specialty,
@@ -817,11 +818,18 @@ public class KbDocumentController {
         }
 
         int end = Math.min(start + limitVal, results.size());
-        if (start > results.size()) {
-            return Collections.emptyList();
+        List<DocumentResponse> slicedItems = Collections.emptyList();
+        if (start <= results.size()) {
+            slicedItems = results.subList(start, end);
         }
 
-        return results.subList(start, end);
+        if (Boolean.TRUE.equals(paginated)) {
+            long totalElements = results.size();
+            long totalPages = (long) Math.ceil((double) totalElements / limitVal);
+            return new PaginatedResponse(slicedItems, totalElements, totalPages);
+        }
+
+        return slicedItems;
     }
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -1306,5 +1314,26 @@ public class KbDocumentController {
 
         public String getCreatedAt() { return createdAt; }
         public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+    }
+
+    public static class PaginatedResponse {
+        private List<DocumentResponse> items;
+        private long totalElements;
+        private long totalPages;
+
+        public PaginatedResponse(List<DocumentResponse> items, long totalElements, long totalPages) {
+            this.items = items;
+            this.totalElements = totalElements;
+            this.totalPages = totalPages;
+        }
+
+        public List<DocumentResponse> getItems() { return items; }
+        public void setItems(List<DocumentResponse> items) { this.items = items; }
+
+        public long getTotalElements() { return totalElements; }
+        public void setTotalElements(long totalElements) { this.totalElements = totalElements; }
+
+        public long getTotalPages() { return totalPages; }
+        public void setTotalPages(long totalPages) { this.totalPages = totalPages; }
     }
 }
