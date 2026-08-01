@@ -189,7 +189,7 @@ paths:
   /documents:
     get:
       summary: Search documents
-      description: Search documents with full-text search and filters.
+      description: Search documents with full-text search and filters. Returns a unified set of results including both local KbDocuments and synchronized LmsMetadata.
       operationId: searchDocuments
       parameters:
         - name: query
