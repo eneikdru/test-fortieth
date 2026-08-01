@@ -330,6 +330,19 @@ public class DocumentSearchAndContentTest {
                 .andExpect(jsonPath("$", hasSize(3)))
                 .andExpect(jsonPath("$[0].title").value("Standard Doc 3"))
                 .andExpect(jsonPath("$[2].title").value("Standard Doc 5"));
+
+        // 7. Requesting explicitly paginated response with paginated=true (Acceptance Criteria verification)
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("specialty", "PaginationTestCategory")
+                        .param("paginated", "true")
+                        .param("page", "0")
+                        .param("size", "5")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.items", hasSize(5)))
+                .andExpect(jsonPath("$.totalElements").value(12))
+                .andExpect(jsonPath("$.totalPages").value(3))
+                .andExpect(jsonPath("$.items[0].title").value("Standard Doc 1"));
     }
 
     @Test
