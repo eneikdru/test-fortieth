@@ -69,7 +69,7 @@ public class TaskService {
         double overallReadiness = calculateFalsificationReadiness();
         log.info("Calculated falsification readiness: {}", overallReadiness);
 
-        if (overallReadiness >= 0.9 - 1e-9) {
+        if (overallReadiness >= 0.8 - 1e-9) {
             List<Task> failedTasks = taskRepository.findByStatus(TaskStatus.FAILED);
             int failedResolvedCount = 0;
             for (Task task : failedTasks) {
@@ -95,7 +95,7 @@ public class TaskService {
             }
 
             if (failedResolvedCount > 0) {
-                log.info("Resolved {} failed tasks because falsification readiness threshold (>= 0.9) was met.", failedResolvedCount);
+                log.info("Resolved {} failed tasks because falsification readiness threshold (>= 0.8) was met.", failedResolvedCount);
                 resolvedCount += failedResolvedCount;
 
                 for (Long featureId : affectedFeatureIds) {
