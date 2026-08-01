@@ -1,0 +1,100 @@
+{
+  "epics": [
+    {
+      "existingEpicId": null,
+      "title": "Knowledge Base Analytics Export",
+      "jtbd": "When I view the analytics dashboard, I want to export the utilization statistics to a file or EIOS, so that I can use them in educational center reports.",
+      "kanoClass": "Performance",
+      "cynefinDomain": "clear",
+      "sixSigmaMetric": "reduce manual reporting time from hours to seconds",
+      "tocConstraintRef": "administrative reporting bottleneck",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: Generate utilization statistics export including popular queries, views, and downloads.",
+        "R2: Support synchronization of the analytics data to EIOS."
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Implement Analytics Export Endpoint",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing the analytics export endpoint for this epic, I want to add file generation and EIOS sync logic to the existing analytics service, so that utilization statistics can be exported or synchronized as required.",
+          "acceptanceCriteria": "Given an admin user,\nWhen they request an analytics export via the existing analytics endpoint,\nThen the backend generates a CSV/PDF report with search queries, views, and downloads, or triggers an EIOS sync.",
+          "leanValue": "valuable",
+          "cynefinDomain": "clear",
+          "tocConstraintRef": "analytics reporting data flow limitation",
+          "sixSigmaMetric": "increase analytics export reliability to 99.9%",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1",
+            "R2"
+          ]
+        }
+      ]
+    },
+    {
+      "existingEpicId": null,
+      "title": "System Backup Administration",
+      "jtbd": "When I perform administrative duties, I want to trigger a system backup, so that I can ensure data safety and recover from failures.",
+      "kanoClass": "Must-Be",
+      "cynefinDomain": "complicated",
+      "sixSigmaMetric": "increase data recovery capability confidence to 100%",
+      "tocConstraintRef": "data persistence and safety vulnerability",
+      "sourceIndex": 1,
+      "requirements": [
+        "R1: Expose a backup trigger capability for administrators.",
+        "R2: Securely capture and store a snapshot of the database and uploaded files."
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Implement System Backup Trigger",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing the backup trigger for this epic, I want to add snapshot and file archiving logic to the existing admin service, so that data safety and recovery capabilities are guaranteed.",
+          "acceptanceCriteria": "Given an authenticated admin user,\nWhen they trigger a system backup request,\nThen the backend successfully creates and securely stores a combined snapshot of the database and uploaded files.",
+          "leanValue": "essential",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "administrative disaster recovery constraint",
+          "sixSigmaMetric": "reduce backup failure rate to 0%",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1",
+            "R2"
+          ]
+        }
+      ]
+    },
+    {
+      "existingEpicId": null,
+      "title": "Unified Search with LMS Metadata",
+      "jtbd": "When I search the knowledge base, I want the results to include indexed materials from LMS platforms (SDO/Teachbase), so that I can find all relevant educational content.",
+      "kanoClass": "Performance",
+      "cynefinDomain": "complicated",
+      "sixSigmaMetric": "increase overall search retrieval completeness by 30%",
+      "tocConstraintRef": "search fragmentation across platforms",
+      "sourceIndex": 2,
+      "requirements": [
+        "R1: Include LMS metadata from platforms like SDO and Teachbase in the search index.",
+        "R2: Merge local Knowledge Base documents and LMS metadata into a unified search response."
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Integrate LMS Metadata into Search",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing unified search for this epic, I want to patch the existing search logic to include synchronized LmsMetadata, so that all relevant educational content is returned in a single query.",
+          "acceptanceCriteria": "Given a user providing a search query,\nWhen the search is executed,\nThen the backend queries both local KbDocuments and synchronized LmsMetadata, returning a unified set of results.",
+          "leanValue": "valuable",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "search engine result unification limitation",
+          "sixSigmaMetric": "reduce missing search results by 90%",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1",
+            "R2"
+          ]
+        }
+      ]
+    }
+  ]
+}
