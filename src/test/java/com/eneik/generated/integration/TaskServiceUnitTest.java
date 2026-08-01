@@ -204,4 +204,84 @@ public class TaskServiceUnitTest {
         verify(taskRepository).updateStatusAtomically(402L, TaskStatus.FAILED, TaskStatus.RESOLVED);
         verify(featureRepository, times(2)).updateReadinessAtomically(4L, 1.0);
     }
+
+    @Test
+    public void testVerifyPipelineFixAndReadinessUpdateInStalledState() {
+        // Replicate project stalled state: 11/13 features complete; 5 tasks queued (READY); 2 tasks failed.
+        // Total tasks = 47. 40 are resolved initially, leaving 5 READY and 2 FAILED.
+        // Feature 1 is an incomplete feature with ID 10L. Feature 2 is another incomplete feature with ID 11L.
+        // Let's setup the mocks.
+
+        List<Task> readyTasks = new ArrayList<>();
+        for (long i = 1; i <= 5; i++) {
+            Task t = new Task();
+            t.setId(500L + i);
+            t.setTitle("Queued Task " + i);
+            t.setStatus(TaskStatus.READY);
+            t.setFeatureId(10L);
+            readyTasks.add(t);
+            when(taskRepository.updateStatusAtomically(500L + i, TaskStatus.READY, TaskStatus.RESOLVED)).thenReturn(1);
+        }
+
+        List<Task> failedTasks = new ArrayList<>();
+        for (long i = 1; i <= 2; i++) {
+            Task t = new Task();
+            t.setId(600L + i);
+            t.setTitle("Failed Task " + i);
+            t.setStatus(TaskStatus.FAILED);
+            t.setFeatureId(11L);
+            failedTasks.add(t);
+            when(taskRepository.updateStatusAtomically(600L + i, TaskStatus.FAILED, TaskStatus.RESOLVED)).thenReturn(1);
+        }
+
+        when(taskRepository.findByStatus(TaskStatus.READY)).thenReturn(readyTasks);
+        when(taskRepository.findByStatus(TaskStatus.PENDING_REVIEW)).thenReturn(Collections.emptyList());
+        when(taskRepository.findByStatus(TaskStatus.FAILED)).thenReturn(failedTasks);
+
+        when(taskRepository.count()).thenReturn(47L);
+        // After resolution, countByStatus(RESOLVED) returns 47
+        when(taskRepository.countByStatus(TaskStatus.RESOLVED)).thenReturn(47L);
+
+        FeatureEntity incompleteFeature1 = new FeatureEntity();
+        incompleteFeature1.setId(10L);
+        incompleteFeature1.setTitle("Incomplete Feature 1");
+        incompleteFeature1.setReadinessRatio(0.625);
+
+        FeatureEntity incompleteFeature2 = new FeatureEntity();
+        incompleteFeature2.setId(11L);
+        incompleteFeature2.setTitle("Incomplete Feature 2");
+        incompleteFeature2.setReadinessRatio(0.333);
+
+        when(featureRepository.findById(10L)).thenReturn(Optional.of(incompleteFeature1));
+        when(featureRepository.findById(11L)).thenReturn(Optional.of(incompleteFeature2));
+
+        // Let's assume after resolving all, we have 45 / 47 task readiness for feature 10L/11L or 1.0 overall.
+        // Mock countByFeatureId and countByFeatureIdAndStatus for updateFeatureReadiness logic
+        when(taskRepository.countByFeatureId(10L)).thenReturn(8L);
+        when(taskRepository.countByFeatureIdAndStatus(10L, TaskStatus.RESOLVED)).thenReturn(8L);
+
+        when(taskRepository.countByFeatureId(11L)).thenReturn(6L);
+        when(taskRepository.countByFeatureIdAndStatus(11L, TaskStatus.RESOLVED)).thenReturn(6L);
+
+        // Act
+        TaskService.TaskResolutionResult result = taskService.resolveTasksAndCalculateReadiness();
+
+        // Assert
+        // All 5 READY tasks and 2 FAILED tasks must be transitioned to RESOLVED.
+        // Total resolved count in this run = 7.
+        assertThat(result.getResolvedCount()).isEqualTo(7);
+        assertThat(result.getReadiness()).isEqualTo(1.0);
+
+        // Verify state updates
+        for (long i = 1; i <= 5; i++) {
+            verify(taskRepository).updateStatusAtomically(500L + i, TaskStatus.READY, TaskStatus.RESOLVED);
+        }
+        for (long i = 1; i <= 2; i++) {
+            verify(taskRepository).updateStatusAtomically(600L + i, TaskStatus.FAILED, TaskStatus.RESOLVED);
+        }
+
+        // Verify readiness ratio updates are propagated
+        verify(featureRepository, atLeastOnce()).updateReadinessAtomically(10L, 1.0);
+        verify(featureRepository, atLeastOnce()).updateReadinessAtomically(11L, 1.0);
+    }
 }
