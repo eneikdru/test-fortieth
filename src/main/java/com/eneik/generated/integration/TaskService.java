@@ -2,6 +2,7 @@ package com.eneik.generated.integration;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +17,9 @@ public class TaskService {
 
     private final TaskRepository taskRepository;
     private final FeatureRepository featureRepository;
+
+    @Value("#{'${tasks.resolve-target-ids:0cb354e9-1300-41a2-aed9-976415ca4262}'.split(',')}")
+    private List<String> targetTaskIds;
 
     public TaskService(TaskRepository taskRepository, FeatureRepository featureRepository) {
         this.taskRepository = taskRepository;
@@ -65,10 +69,22 @@ public class TaskService {
         double overallReadiness = calculateFalsificationReadiness();
         log.info("Calculated falsification readiness: {}", overallReadiness);
 
-        if (overallReadiness >= 0.9) {
+        if (overallReadiness >= 0.9 - 1e-9) {
             List<Task> failedTasks = taskRepository.findByStatus(TaskStatus.FAILED);
             int failedResolvedCount = 0;
             for (Task task : failedTasks) {
+                boolean isTargetTask = false;
+                if (task.getTitle() != null && targetTaskIds != null) {
+                    for (String targetId : targetTaskIds) {
+                        if (task.getTitle().contains(targetId)) {
+                            isTargetTask = true;
+                            break;
+                        }
+                    }
+                }
+                if (isTargetTask) {
+                    log.info("Target task identified in failed list: {}", task.getTitle());
+                }
                 int updated = taskRepository.updateStatusAtomically(task.getId(), TaskStatus.FAILED, TaskStatus.RESOLVED);
                 if (updated > 0) {
                     failedResolvedCount++;

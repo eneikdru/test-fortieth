@@ -359,4 +359,50 @@ public class TaskProgressionIntegrationTest {
         List<Task> failedTasks = taskRepository.findByStatus(TaskStatus.FAILED);
         assertThat(failedTasks).isEmpty();
     }
+
+    @Test
+    public void testSpecificFailedTaskResolvedAtNinetyPercentReadiness() throws Exception {
+        // Arrange
+        FeatureEntity feature = new FeatureEntity();
+        feature.setTitle("Falsification Readiness Target Feature");
+        feature.setReadinessRatio(0.0);
+        featureRepository.save(feature);
+
+        // Setup 10 tasks in total: 9 READY, 1 FAILED (with title containing target task ID)
+        for (int i = 1; i <= 9; i++) {
+            Task t = new Task();
+            t.setTitle("Normal Ready Task " + i);
+            t.setStatus(TaskStatus.READY);
+            t.setFeatureId(feature.getId());
+            taskRepository.save(t);
+        }
+
+        Task targetFailedTask = new Task();
+        targetFailedTask.setTitle("Failed falsification task 0cb354e9-1300-41a2-aed9-976415ca4262");
+        targetFailedTask.setStatus(TaskStatus.FAILED);
+        targetFailedTask.setFeatureId(feature.getId());
+        taskRepository.save(targetFailedTask);
+
+        // Act
+        MvcResult mvcResult = mockMvc.perform(post("/api/v1/tasks/resolve"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Assert API Response
+        String jsonResponse = mvcResult.getResponse().getContentAsString();
+        Map<String, Object> responseMap = objectMapper.readValue(jsonResponse, Map.class);
+
+        int resolvedCount = (int) responseMap.get("resolvedCount");
+        assertThat(resolvedCount).isEqualTo(10); // 9 READY + 1 FAILED
+
+        double readiness = ((Number) responseMap.get("readiness")).doubleValue();
+        assertThat(readiness).isCloseTo(1.0, org.assertj.core.data.Offset.offset(1e-9));
+
+        // Verify DB State
+        List<Task> resolvedTasks = taskRepository.findByStatus(TaskStatus.RESOLVED);
+        assertThat(resolvedTasks).hasSize(10);
+
+        Task updatedTargetTask = taskRepository.findById(targetFailedTask.getId()).orElseThrow();
+        assertThat(updatedTargetTask.getStatus()).isEqualTo(TaskStatus.RESOLVED);
+    }
 }
