@@ -405,4 +405,122 @@ public class TaskProgressionIntegrationTest {
         Task updatedTargetTask = taskRepository.findById(targetFailedTask.getId()).orElseThrow();
         assertThat(updatedTargetTask.getStatus()).isEqualTo(TaskStatus.RESOLVED);
     }
+
+    @Test
+    public void testRegressionRecoveryAtThirtyFourTasks() throws Exception {
+        // Arrange
+        // Setup 13 features
+        FeatureEntity[] features = new FeatureEntity[13];
+        for (int i = 0; i < 13; i++) {
+            FeatureEntity f = new FeatureEntity();
+            f.setTitle("Feature " + (i + 1));
+            f.setReadinessRatio(0.0);
+            features[i] = featureRepository.save(f);
+        }
+
+        // Setup 34 tasks: 29 READY, 5 FAILED distributed across the 13 features
+        // Features 1 to 9: 2 READY tasks each (total 18 READY)
+        for (int i = 0; i < 9; i++) {
+            for (int j = 0; j < 2; j++) {
+                Task t = new Task();
+                t.setTitle("F" + (i + 1) + " Task " + j);
+                t.setStatus(TaskStatus.READY);
+                t.setFeatureId(features[i].getId());
+                taskRepository.save(t);
+            }
+        }
+
+        // Feature 10: 2 READY, 1 FAILED
+        for (int j = 0; j < 2; j++) {
+            Task t = new Task();
+            t.setTitle("F10 Task Ready " + j);
+            t.setStatus(TaskStatus.READY);
+            t.setFeatureId(features[9].getId());
+            taskRepository.save(t);
+        }
+        Task f10Failed = new Task();
+        f10Failed.setTitle("F10 Task Failed");
+        f10Failed.setStatus(TaskStatus.FAILED);
+        f10Failed.setFeatureId(features[9].getId());
+        taskRepository.save(f10Failed);
+
+        // Feature 11: 2 READY, 1 FAILED
+        for (int j = 0; j < 2; j++) {
+            Task t = new Task();
+            t.setTitle("F11 Task Ready " + j);
+            t.setStatus(TaskStatus.READY);
+            t.setFeatureId(features[10].getId());
+            taskRepository.save(t);
+        }
+        Task f11Failed = new Task();
+        f11Failed.setTitle("F11 Task Failed");
+        f11Failed.setStatus(TaskStatus.FAILED);
+        f11Failed.setFeatureId(features[10].getId());
+        taskRepository.save(f11Failed);
+
+        // Feature 12: 3 READY, 1 FAILED
+        for (int j = 0; j < 3; j++) {
+            Task t = new Task();
+            t.setTitle("F12 Task Ready " + j);
+            t.setStatus(TaskStatus.READY);
+            t.setFeatureId(features[11].getId());
+            taskRepository.save(t);
+        }
+        Task f12Failed = new Task();
+        f12Failed.setTitle("F12 Task Failed");
+        f12Failed.setStatus(TaskStatus.FAILED);
+        f12Failed.setFeatureId(features[11].getId());
+        taskRepository.save(f12Failed);
+
+        // Feature 13: 4 READY, 2 FAILED
+        for (int j = 0; j < 4; j++) {
+            Task t = new Task();
+            t.setTitle("F13 Task Ready " + j);
+            t.setStatus(TaskStatus.READY);
+            t.setFeatureId(features[12].getId());
+            taskRepository.save(t);
+        }
+        for (int j = 0; j < 2; j++) {
+            Task t = new Task();
+            t.setTitle("F13 Task Failed " + j);
+            t.setStatus(TaskStatus.FAILED);
+            t.setFeatureId(features[12].getId());
+            taskRepository.save(t);
+        }
+
+        // Verify setup
+        assertThat(featureRepository.count()).isEqualTo(13);
+        assertThat(taskRepository.count()).isEqualTo(34);
+        assertThat(taskRepository.countByStatus(TaskStatus.READY)).isEqualTo(29);
+        assertThat(taskRepository.countByStatus(TaskStatus.FAILED)).isEqualTo(5);
+
+        // Act
+        MvcResult mvcResult = mockMvc.perform(post("/api/v1/tasks/resolve"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Assert API Response
+        String jsonResponse = mvcResult.getResponse().getContentAsString();
+        Map<String, Object> responseMap = objectMapper.readValue(jsonResponse, Map.class);
+
+        // 29 READY tasks + 5 FAILED tasks should be resolved
+        int resolvedCount = (int) responseMap.get("resolvedCount");
+        assertThat(resolvedCount).isEqualTo(34);
+
+        double readiness = ((Number) responseMap.get("readiness")).doubleValue();
+        assertThat(readiness).isEqualTo(1.0);
+
+        // Verify task state transitions in DB - all 34 should be RESOLVED
+        List<Task> resolvedTasks = taskRepository.findByStatus(TaskStatus.RESOLVED);
+        assertThat(resolvedTasks).hasSize(34);
+
+        List<Task> failedTasks = taskRepository.findByStatus(TaskStatus.FAILED);
+        assertThat(failedTasks).isEmpty();
+
+        // Verify that all 13 features have updated to 1.0 readiness
+        for (int i = 0; i < 13; i++) {
+            FeatureEntity updatedFeature = featureRepository.findById(features[i].getId()).get();
+            assertThat(updatedFeature.getReadinessRatio()).isEqualTo(1.0);
+        }
+    }
 }

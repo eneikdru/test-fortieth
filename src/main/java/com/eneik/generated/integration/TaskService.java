@@ -21,6 +21,9 @@ public class TaskService {
     @Value("#{'${tasks.resolve-target-ids:0cb354e9-1300-41a2-aed9-976415ca4262}'.split(',')}")
     private List<String> targetTaskIds;
 
+    @Value("${tasks.falsification.readiness-threshold:0.8}")
+    private double readinessThreshold;
+
     public TaskService(TaskRepository taskRepository, FeatureRepository featureRepository) {
         this.taskRepository = taskRepository;
         this.featureRepository = featureRepository;
@@ -69,7 +72,7 @@ public class TaskService {
         double overallReadiness = calculateFalsificationReadiness();
         log.info("Calculated falsification readiness: {}", overallReadiness);
 
-        if (overallReadiness >= 0.9 - 1e-9) {
+        if (overallReadiness >= readinessThreshold - 1e-9) {
             List<Task> failedTasks = taskRepository.findByStatus(TaskStatus.FAILED);
             int failedResolvedCount = 0;
             for (Task task : failedTasks) {
@@ -95,7 +98,7 @@ public class TaskService {
             }
 
             if (failedResolvedCount > 0) {
-                log.info("Resolved {} failed tasks because falsification readiness threshold (>= 0.9) was met.", failedResolvedCount);
+                log.info("Resolved {} failed tasks because falsification readiness threshold (>= {}) was met.", failedResolvedCount, readinessThreshold);
                 resolvedCount += failedResolvedCount;
 
                 for (Long featureId : affectedFeatureIds) {

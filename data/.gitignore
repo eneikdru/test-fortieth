@@ -1,3 +1,4 @@
 # Ignore local H2 file database
 appdb.mv.db
+appdb.trace.db
 storage/
