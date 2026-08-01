@@ -1,0 +1,39 @@
+{
+  "gaps": [
+    {
+      "title": "Missing offline synchronization",
+      "roleTag": "BARCAN-TAG-02",
+      "jtbd": "When using the system without a reliable connection, I want to access materials offline and sync them later, so that continuous learning is supported.",
+      "acceptanceCriteria": "Given a client application, When the user goes offline, Then previously synced materials are available. Given an offline action, When connectivity is restored, Then the state syncs with the server.",
+      "reason": "Literal brief requirement: 'Возможность добавления материалов в офлайн-режиме с последующей синхронизацией'."
+    },
+    {
+      "title": "Missing Russian language localization",
+      "roleTag": "BARCAN-TAG-11",
+      "jtbd": "When navigating the interface, I want to see UI elements in Russian, so that I can understand and use the system efficiently according to the project requirements.",
+      "acceptanceCriteria": "Given the web interface, When a user accesses it, Then UI labels and buttons are in Russian.",
+      "reason": "Literal brief requirement: 'Интерфейс на русском языке'. Currently, App.svelte uses English strings (e.g., 'Search Results', 'Suggested Documents')."
+    },
+    {
+      "title": "Missing retirement date for archived versions",
+      "roleTag": "BARCAN-TAG-02",
+      "jtbd": "When a document is updated, I want the previous version preserved with an explicit retirement date, so that audit and compliance requirements are met.",
+      "acceptanceCriteria": "Given a document update, When the new version is created, Then the older version is marked as archived with the date of decommissioning.",
+      "reason": "Literal brief requirement: 'При замене документа автоматически сохранять предыдущую версию в архиве с указанием даты вывода из эксплуатации'."
+    },
+    {
+      "title": "Missing concurrent editing locks",
+      "roleTag": "BARCAN-TAG-02",
+      "jtbd": "When multiple users edit a document simultaneously, I want the system to handle conflicts, so that changes are not silently overwritten.",
+      "acceptanceCriteria": "Given two users editing the same document, When one saves, Then the other is notified of a conflict upon saving.",
+      "reason": "Literal brief requirement: 'Поддержка многопользовательской работы без конфликтов редактирования'."
+    },
+    {
+      "title": "Missing pagination on search endpoint",
+      "roleTag": "BARCAN-TAG-02",
+      "jtbd": "When searching documents, I want the results to be paginated, so that large sets of data do not overwhelm the server or client.",
+      "acceptanceCriteria": "Given a search query returning many results, When the API is called, Then the response is paginated (e.g., using page and size).",
+      "reason": "Domain-standard expectation: A public list endpoint for searching a potentially large knowledge base needs pagination. The current implementation accepts pagination parameters but ignores them, returning a flat list."
+    }
+  ]
+}
