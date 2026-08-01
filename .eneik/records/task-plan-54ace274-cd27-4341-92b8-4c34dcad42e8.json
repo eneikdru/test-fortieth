@@ -1,0 +1,34 @@
+{
+  "epics": [
+    {
+      "existingEpicId": "c0ebc3fb-e9c3-4809-84cd-e0b6d5007703",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "Reduce project cycle stall rate due to stuck tasks from 1 to 0",
+      "tocConstraintRef": "Project cycle completion pipeline",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: Patch the existing falsification pipeline to resolve the stuck failed task taskId=0cb354e9-1300-41a2-aed9-976415ca4262."
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Resolve stuck task 0cb354e9-1300-41a2-aed9-976415ca4262 in falsification pipeline",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing the fix for this epic, I want to patch the pipeline logic to correctly process the stuck task, so that the project cycle can finish successfully.",
+          "acceptanceCriteria": "Given a stuck failed task with ID 0cb354e9-1300-41a2-aed9-976415ca4262, When the pipeline patch executes, Then the task is transitioned to a resolved state.\nGiven the task status is being updated, When the database update occurs, Then it must use an atomically-guarded database update to prevent lost updates.",
+          "leanValue": "essential",
+          "cynefinDomain": "clear",
+          "tocConstraintRef": "Falsification readiness pipeline stuck task resolution",
+          "sixSigmaMetric": "Reduce unresolved failed tasks from 1 to 0 in the project cycle",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    }
+  ]
+}
