@@ -1,0 +1,29 @@
+{
+  "violations": [
+    {
+      "roleTag": "BARCAN-TAG-00",
+      "type": "refusal_criteria",
+      "reason": "PR #84 violates two refusal criteria in KbDocumentController.java: 1) The calculateMatchScore function exceeds 40 lines and has 4 levels of nested control structures (for -> for -> if -> if). 2) The code contains numerous magic numbers (e.g., 10000, 5000, 200, 50) directly inline instead of using named constants. Additionally, it leaks business logic into the controller layer."
+    },
+    {
+      "roleTag": "BARCAN-TAG-06",
+      "type": "methodological",
+      "philosopher": "Карл Поппер",
+      "thesis": "Принцип фальсифицируемости (критический рационализм)",
+      "score": "0",
+      "mustBe": "The coverage audit must actively falsify completeness by identifying actual missing requirements.",
+      "performance": "Accurately reporting that massive portions of the specification (Financial block, Moodle integrations, Security bots) are missing from the codebase.",
+      "attractive": "Completely eliminating false-positive 'no gaps found' coverage reports in CI."
+    },
+    {
+      "roleTag": "BARCAN-TAG-06",
+      "type": "methodological",
+      "philosopher": "Альфред Тарский",
+      "thesis": "Принцип семантической теории истины (T-схема)",
+      "score": "0",
+      "mustBe": "The status of a coverage audit is true only if the specification is actually fully covered in reality.",
+      "performance": "Validating the actual code state against the 15+ internal work items present in the brief.",
+      "attractive": "Ensuring perfect alignment between the declarative audit output and procedural truth."
+    }
+  ]
+}
