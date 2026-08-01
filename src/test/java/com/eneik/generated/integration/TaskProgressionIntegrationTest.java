@@ -37,6 +37,9 @@ public class TaskProgressionIntegrationTest {
     @Autowired
     private TaskTimeoutScheduler taskTimeoutScheduler;
 
+    @Autowired
+    private org.springframework.transaction.PlatformTransactionManager transactionManager;
+
     @BeforeEach
     public void setUp() {
         taskRepository.deleteAll();
@@ -242,5 +245,71 @@ public class TaskProgressionIntegrationTest {
         // Therefore, readiness should be 0.0.
         FeatureEntity updatedFeature = featureRepository.findById(feature.getId()).orElseThrow();
         assertThat(updatedFeature.getReadinessRatio()).isEqualTo(0.0);
+    }
+
+    @Test
+    public void testScheduledCheckStuckTasksAreFailedWithCustomTimeout() {
+        // Arrange
+        FeatureEntity feature = new FeatureEntity();
+        feature.setTitle("Custom Timeout Feature");
+        feature.setReadinessRatio(0.5);
+        featureRepository.save(feature);
+
+        // We will instantiate a scheduler with a 1-hour timeout (instead of default 12 hours)
+        TaskTimeoutScheduler customScheduler = new TaskTimeoutScheduler(
+                taskRepository,
+                featureRepository,
+                java.time.Clock.systemDefaultZone(),
+                1 // 1 hour timeout
+        );
+
+        // 1. Task stuck in PENDING_REVIEW for 2 hours (longer than 1 hour timeout)
+        Task stuckTask = new Task();
+        stuckTask.setTitle("Custom Stuck Task");
+        stuckTask.setStatus(TaskStatus.PENDING_REVIEW);
+        stuckTask.setStatusChangedAt(java.time.LocalDateTime.now().minusHours(2));
+        stuckTask.setFeatureId(feature.getId());
+        taskRepository.save(stuckTask);
+
+        // 2. Task recently moved to PENDING_REVIEW (30 minutes ago, less than 1 hour timeout)
+        Task recentTask = new Task();
+        recentTask.setTitle("Custom Recent Task");
+        recentTask.setStatus(TaskStatus.PENDING_REVIEW);
+        recentTask.setStatusChangedAt(java.time.LocalDateTime.now().minusMinutes(30));
+        recentTask.setFeatureId(feature.getId());
+        taskRepository.save(recentTask);
+
+        // Act - Run scheduler within a transaction block so `@Transactional` behavior is simulated
+        org.springframework.transaction.support.TransactionTemplate transactionTemplate =
+                new org.springframework.transaction.support.TransactionTemplate(transactionManager);
+        transactionTemplate.executeWithoutResult(status -> {
+            customScheduler.checkPendingReviewTimeouts();
+        });
+
+        // Assert
+        // The stuck task should be FAILED
+        Task updatedStuckTask = taskRepository.findById(stuckTask.getId()).orElseThrow();
+        assertThat(updatedStuckTask.getStatus()).isEqualTo(TaskStatus.FAILED);
+
+        // The recent task should remain PENDING_REVIEW
+        Task updatedRecentTask = taskRepository.findById(recentTask.getId()).orElseThrow();
+        assertThat(updatedRecentTask.getStatus()).isEqualTo(TaskStatus.PENDING_REVIEW);
+
+        // Verify feature readiness is updated correctly
+        FeatureEntity updatedFeature = featureRepository.findById(feature.getId()).orElseThrow();
+        assertThat(updatedFeature.getReadinessRatio()).isEqualTo(0.0);
+    }
+
+    @Test
+    public void testTaskTimeoutSchedulerThrowsExceptionForInvalidTimeout() {
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> {
+            new TaskTimeoutScheduler(
+                    taskRepository,
+                    featureRepository,
+                    java.time.Clock.systemDefaultZone(),
+                    0 // invalid timeout
+            );
+        }).isInstanceOf(IllegalArgumentException.class)
+          .hasMessageContaining("Timeout hours must be greater than zero");
     }
 }

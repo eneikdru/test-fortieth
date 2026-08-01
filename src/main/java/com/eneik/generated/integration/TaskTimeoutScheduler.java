@@ -38,6 +38,9 @@ public class TaskTimeoutScheduler {
             FeatureRepository featureRepository,
             Clock clock,
             int timeoutHours) {
+        if (timeoutHours <= 0) {
+            throw new IllegalArgumentException("Timeout hours must be greater than zero. Got: " + timeoutHours);
+        }
         this.taskRepository = taskRepository;
         this.featureRepository = featureRepository;
         this.clock = clock;
