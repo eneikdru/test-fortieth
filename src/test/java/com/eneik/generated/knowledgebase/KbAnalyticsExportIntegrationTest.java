@@ -169,4 +169,37 @@ public class KbAnalyticsExportIntegrationTest {
                         .accept(MediaType.ALL))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    public void testAnalyticsOrderingAndFallback() throws Exception {
+        String adminToken = getJwtToken("admin_test", "ADMINISTRATOR");
+        KbUser adminUser = userRepository.findByUsername("admin_test").orElseThrow();
+
+        // Log views for an existing document ID (even if not in DB to trigger fallback title resolution)
+        KbAuditLog log1 = new KbAuditLog();
+        log1.setUser(adminUser);
+        log1.setAction("VIEW");
+        log1.setTargetEntity("KbDocument");
+        log1.setTargetId(999L);
+        log1.setDetails("My Fallback Document Title");
+        auditLogRepository.save(log1);
+
+        KbAuditLog log2 = new KbAuditLog();
+        log2.setUser(adminUser);
+        log2.setAction("VIEW");
+        log2.setTargetEntity("KbDocument");
+        log2.setTargetId(999L);
+        log2.setDetails("My Fallback Document Title");
+        auditLogRepository.save(log2);
+
+        // Fetch CSV and verify fallback title is correct
+        String csvContent = mockMvc.perform(get("/api/v1/integration/analytics/export")
+                        .param("format", "csv")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .accept(MediaType.ALL))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertTrue(csvContent.contains("999,My Fallback Document Title,2"));
+    }
 }
