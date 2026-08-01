@@ -1,3 +1,7 @@
 # Ignore local H2 file database
 appdb.mv.db
+appdb.lock.db
+appdb.trace.db
+*.lock.db
+*.trace.db
 storage/

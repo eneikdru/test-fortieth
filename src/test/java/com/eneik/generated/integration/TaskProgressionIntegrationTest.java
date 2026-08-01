@@ -312,4 +312,57 @@ public class TaskProgressionIntegrationTest {
         }).isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("Timeout hours must be greater than zero");
     }
+
+    @Test
+    public void testFailedFalsificationTaskResolvedAt90PercentReadiness() throws Exception {
+        // Arrange
+        FeatureEntity feature = new FeatureEntity();
+        feature.setTitle("Falsification Pipeline Feature");
+        feature.setReadinessRatio(0.0);
+        featureRepository.save(feature);
+
+        // 9 READY tasks + 1 FAILED task (taskId=0cb354e9-1300-41a2-aed9-976415ca4262)
+        for (int i = 1; i <= 9; i++) {
+            Task t = new Task();
+            t.setTitle("Falsification Task " + i);
+            t.setStatus(TaskStatus.READY);
+            t.setFeatureId(feature.getId());
+            taskRepository.save(t);
+        }
+
+        Task failedTask = new Task();
+        failedTask.setTitle("0cb354e9-1300-41a2-aed9-976415ca4262");
+        failedTask.setStatus(TaskStatus.FAILED);
+        failedTask.setFeatureId(feature.getId());
+        taskRepository.save(failedTask);
+
+        // Act - Call the resolution endpoint
+        MvcResult mvcResult = mockMvc.perform(post("/api/v1/tasks/resolve"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Assert API Response
+        String jsonResponse = mvcResult.getResponse().getContentAsString();
+        Map<String, Object> responseMap = objectMapper.readValue(jsonResponse, Map.class);
+
+        int resolvedCount = (int) responseMap.get("resolvedCount");
+        double readiness = ((Number) responseMap.get("readiness")).doubleValue();
+
+        // There were 9 ready tasks, which brought readiness to 9/10 = 90%.
+        // The logic then evaluated the failed task, transitioned it to RESOLVED,
+        // resulting in 10/10 resolved tasks = 100% readiness!
+        assertThat(resolvedCount).isEqualTo(10);
+        assertThat(readiness).isEqualTo(1.0);
+
+        // Verify task state in DB
+        List<Task> resolvedTasks = taskRepository.findByStatus(TaskStatus.RESOLVED);
+        assertThat(resolvedTasks).hasSize(10);
+
+        List<Task> failedTasks = taskRepository.findByStatus(TaskStatus.FAILED);
+        assertThat(failedTasks).isEmpty();
+
+        // Verify feature readiness in DB: 10/10 resolved = 1.0 ratio
+        FeatureEntity updatedFeature = featureRepository.findById(feature.getId()).orElseThrow();
+        assertThat(updatedFeature.getReadinessRatio()).isEqualTo(1.0);
+    }
 }
