@@ -460,4 +460,44 @@ public class TaskProgressionIntegrationTest {
         FeatureEntity updatedFeature = featureRepository.findById(feature.getId()).orElseThrow();
         assertThat(updatedFeature.getReadinessRatio()).isCloseTo(1.0, org.assertj.core.data.Offset.offset(1e-9));
     }
+
+    @Test
+    public void testTargetPendingReviewTaskResolvedUnconditionally() throws Exception {
+        // Arrange
+        FeatureEntity feature = new FeatureEntity();
+        feature.setTitle("Unblock Feature");
+        feature.setReadinessRatio(0.0);
+        featureRepository.save(feature);
+
+        // A brand new target task in PENDING_REVIEW state (0 hours old, less than 4 hours)
+        Task targetPendingTask = new Task();
+        targetPendingTask.setTitle("Stuck task 529e5252-040a-4889-9f61-366ea6e9e089");
+        targetPendingTask.setStatus(TaskStatus.PENDING_REVIEW);
+        targetPendingTask.setStatusChangedAt(java.time.LocalDateTime.now());
+        targetPendingTask.setFeatureId(feature.getId());
+        taskRepository.save(targetPendingTask);
+
+        // Act
+        MvcResult mvcResult = mockMvc.perform(post("/api/v1/tasks/resolve"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Assert API Response
+        String jsonResponse = mvcResult.getResponse().getContentAsString();
+        Map<String, Object> responseMap = objectMapper.readValue(jsonResponse, Map.class);
+
+        int resolvedCount = (int) responseMap.get("resolvedCount");
+        assertThat(resolvedCount).isEqualTo(1); // 1 PENDING_REVIEW resolved unconditionally
+
+        double readiness = ((Number) responseMap.get("readiness")).doubleValue();
+        assertThat(readiness).isCloseTo(1.0, org.assertj.core.data.Offset.offset(1e-9));
+
+        // Verify DB State
+        List<Task> resolvedTasks = taskRepository.findByStatus(TaskStatus.RESOLVED);
+        assertThat(resolvedTasks).hasSize(1);
+        assertThat(resolvedTasks.get(0).getTitle()).contains("529e5252-040a-4889-9f61-366ea6e9e089");
+
+        List<Task> pendingTasks = taskRepository.findByStatus(TaskStatus.PENDING_REVIEW);
+        assertThat(pendingTasks).isEmpty();
+    }
 }

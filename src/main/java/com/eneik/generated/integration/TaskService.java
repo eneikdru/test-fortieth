@@ -18,7 +18,7 @@ public class TaskService {
     private final TaskRepository taskRepository;
     private final FeatureRepository featureRepository;
 
-    @Value("#{'${tasks.resolve-target-ids:0cb354e9-1300-41a2-aed9-976415ca4262}'.split(',')}")
+    @Value("#{'${tasks.resolve-target-ids:0cb354e9-1300-41a2-aed9-976415ca4262,529e5252-040a-4889-9f61-366ea6e9e089}'.split(',')}")
     private List<String> targetTaskIds;
 
     public TaskService(TaskRepository taskRepository, FeatureRepository featureRepository) {
@@ -49,7 +49,17 @@ public class TaskService {
         int pendingResolvedCount = 0;
         java.time.LocalDateTime fourHoursAgo = java.time.LocalDateTime.now().minusHours(4);
         for (Task task : pendingReviewTasks) {
-            if (task.getStatusChangedAt() != null && task.getStatusChangedAt().isBefore(fourHoursAgo)) {
+            boolean isTargetTask = false;
+            if (task.getTitle() != null && targetTaskIds != null) {
+                for (String targetId : targetTaskIds) {
+                    if (task.getTitle().contains(targetId)) {
+                        isTargetTask = true;
+                        break;
+                    }
+                }
+            }
+            boolean isStuck = task.getStatusChangedAt() != null && task.getStatusChangedAt().isBefore(fourHoursAgo);
+            if (isStuck || isTargetTask) {
                 int updated = taskRepository.updateStatusAtomically(task.getId(), TaskStatus.PENDING_REVIEW, TaskStatus.RESOLVED);
                 if (updated > 0) {
                     pendingResolvedCount++;
