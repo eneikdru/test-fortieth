@@ -1,0 +1,39 @@
+{
+  "gaps": [
+    {
+      "title": "Missing Analytics Export Endpoint",
+      "roleTag": "BARCAN-TAG-02",
+      "jtbd": "When I view the analytics dashboard, I want to export the utilization statistics to a file or EIOS, so that I can use them in educational center reports.",
+      "acceptanceCriteria": "Given an admin user, When they request an analytics export, Then the system generates and returns a CSV/PDF report containing search queries, views, and downloads, or triggers an EIOS sync.",
+      "reason": "literal brief requirement: 'экспорт статистики использования базы знаний (популярные запросы, просмотры, скачивания)' and 'выгрузка в ЭИОС и в отчёты образовательного центра'."
+    },
+    {
+      "title": "Missing Backup Mechanism",
+      "roleTag": "BARCAN-TAG-02",
+      "jtbd": "When I perform administrative duties, I want to trigger a system backup, so that I can ensure data safety and recover from failures.",
+      "acceptanceCriteria": "Given an admin user, When they trigger a backup, Then the backend creates and securely stores a snapshot of the database and uploaded files.",
+      "reason": "literal brief requirement: 'Администратор: ... резервное копирование'. The frontend currently simulates a backup with a timeout, but the backend lacks the actual implementation."
+    },
+    {
+      "title": "Unified Search Excludes LMS Metadata",
+      "roleTag": "BARCAN-TAG-02",
+      "jtbd": "When I search the knowledge base, I want the results to include indexed materials from LMS platforms (SDO/Teachbase), so that I can find all relevant educational content.",
+      "acceptanceCriteria": "Given a search query, When the user executes a search, Then the backend searches both local KbDocuments and synchronized LmsMetadata, returning a unified set of results.",
+      "reason": "literal brief requirement: 'Поиск: Единый поиск по базе знаний + индексация материалов SDO/Teachbase (по метаданным).' Currently, searchDocuments only queries KbDocument."
+    },
+    {
+      "title": "Broken Text Extraction for Binary Files",
+      "roleTag": "BARCAN-TAG-02",
+      "jtbd": "When I upload a binary document like a PDF or DOCX, I want its text to be correctly extracted, so that full-text search can match against its actual content.",
+      "acceptanceCriteria": "Given a binary file upload, When the backend processes it, Then it uses an appropriate parser (e.g., Apache Tika) to extract text, rather than simply casting raw bytes to a UTF-8 string.",
+      "reason": "literal brief requirement: 'полнотекстовый поиск ... поддержка файлов: PDF, DOCX, XLSX, PPTX'. Using new String(file.getBytes(), StandardCharsets.UTF_8) on binary files produces garbage, silently breaking the full-text search requirement."
+    },
+    {
+      "title": "Missing Pagination Metadata in Search Response",
+      "roleTag": "BARCAN-TAG-02",
+      "jtbd": "When I request a paginated list of documents, I want to receive the total count of matching items, so that the client UI can correctly render pagination controls.",
+      "acceptanceCriteria": "Given a paginated search request, When the backend returns results, Then the response payload includes total elements and total pages alongside the items array.",
+      "reason": "domain-standard expectation: Paginated list endpoints typically need to return total counts (e.g., via a standard Page<T> response) so the UI knows how many pages exist."
+    }
+  ]
+}
