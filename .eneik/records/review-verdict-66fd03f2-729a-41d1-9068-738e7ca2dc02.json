@@ -1,0 +1,10 @@
+{
+  "verdicts": [
+    {
+      "sourceIndex": 0,
+      "verdict": "block",
+      "criticalReason": "The PR only updates the OpenAPI YAML description line and does not implement any of the required backend logic or data changes to search synchronized LmsMetadata. Additionally, there are no unit or integration tests included, which is a direct contradiction of the Acceptance Criteria and the Definition of Done.",
+      "concerns": []
+    }
+  ]
+}
