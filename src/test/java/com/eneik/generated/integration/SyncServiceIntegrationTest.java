@@ -64,8 +64,9 @@ public class SyncServiceIntegrationTest {
         }
     }
 
-    static class MockEiosClient implements EiosClient {
+    public static class MockEiosClient implements EiosClient {
         private List<EiosUserRoleDto> list = new ArrayList<>();
+        private String lastSyncedAnalytics;
 
         public void setList(List<EiosUserRoleDto> list) {
             this.list = list;
@@ -74,6 +75,15 @@ public class SyncServiceIntegrationTest {
         @Override
         public List<EiosUserRoleDto> fetchUserRoleChanges() {
             return list;
+        }
+
+        @Override
+        public void syncAnalytics(String analyticsDataCsv) {
+            this.lastSyncedAnalytics = analyticsDataCsv;
+        }
+
+        public String getLastSyncedAnalytics() {
+            return lastSyncedAnalytics;
         }
     }
 
