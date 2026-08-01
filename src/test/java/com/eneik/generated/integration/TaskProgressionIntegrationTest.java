@@ -15,7 +15,9 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -37,6 +39,9 @@ public class TaskProgressionIntegrationTest {
 
     @Autowired
     private TaskTimeoutScheduler taskTimeoutScheduler;
+
+    @Autowired
+    private TaskService taskService;
 
     @Autowired
     private org.springframework.transaction.PlatformTransactionManager transactionManager;
@@ -620,5 +625,57 @@ public class TaskProgressionIntegrationTest {
                 .filter(f -> f.getReadinessRatio() >= 1.0 - 1e-9)
                 .count();
         assertThat(finalCompleteFeatures).isEqualTo(13);
+    }
+
+    @Test
+    public void testGetFlowCoreStateEndpointWhenStalled() throws Exception {
+        // Arrange
+        FeatureEntity feature = new FeatureEntity();
+        feature.setTitle("State Test Feature");
+        feature.setReadinessRatio(0.0);
+        featureRepository.save(feature);
+
+        Task readyTask = new Task();
+        readyTask.setTitle("Queued Task");
+        readyTask.setStatus(TaskStatus.READY);
+        readyTask.setFeatureId(feature.getId());
+        taskRepository.save(readyTask);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/v1/tasks/state"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("SYSTEM_STALLED"));
+    }
+
+    @Test
+    public void testScheduledEvaluationAndAutomaticResolution() throws Exception {
+        // Arrange: Replicate stalled state with a ready task
+        FeatureEntity feature = new FeatureEntity();
+        feature.setTitle("Auto-Recovery Feature");
+        feature.setReadinessRatio(0.0);
+        featureRepository.save(feature);
+
+        Task readyTask = new Task();
+        readyTask.setTitle("Idle Queued Task");
+        readyTask.setStatus(TaskStatus.READY);
+        readyTask.setFeatureId(feature.getId());
+        taskRepository.save(readyTask);
+
+        // Verify state is stalled initially
+        mockMvc.perform(get("/api/v1/tasks/state"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("SYSTEM_STALLED"));
+
+        // Act: Directly trigger the scheduled evaluation method
+        taskService.evaluateAndResumeIfStalled();
+
+        // Assert: The stalled task should have been automatically resolved and state is now COMPLETED
+        mockMvc.perform(get("/api/v1/tasks/state"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("COMPLETED"));
+
+        List<Task> resolved = taskRepository.findByStatus(TaskStatus.RESOLVED);
+        assertThat(resolved).isNotEmpty();
+        assertThat(taskRepository.findByStatus(TaskStatus.READY)).isEmpty();
     }
 }
