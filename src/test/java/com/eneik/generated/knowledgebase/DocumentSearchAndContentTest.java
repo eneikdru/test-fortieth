@@ -1,5 +1,7 @@
 package com.eneik.generated.knowledgebase;
 
+import com.eneik.generated.integration.LmsMetadata;
+import com.eneik.generated.integration.LmsMetadataRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +40,9 @@ public class DocumentSearchAndContentTest {
     @Autowired
     private KbAuditLogRepository auditLogRepository;
 
+    @Autowired
+    private LmsMetadataRepository lmsMetadataRepository;
+
     @BeforeEach
     public void setup() {
         // Clear database in correct order of constraints
@@ -45,6 +50,7 @@ public class DocumentSearchAndContentTest {
         versionRepository.deleteAll();
         documentRepository.deleteAll();
         userRepository.deleteAll();
+        lmsMetadataRepository.deleteAll();
     }
 
     @Test
@@ -401,5 +407,94 @@ public class DocumentSearchAndContentTest {
                 .andExpect(jsonPath("$", hasSize(2)))
                 .andExpect(jsonPath("$[0].title").value("Основы Эпидемологии"))
                 .andExpect(jsonPath("$[1].title").value("Основы Эпидемиологии"));
+    }
+
+    @Test
+    public void testUnifiedSearchWithLocalAndLmsMetadata() throws Exception {
+        // 1. Upload a local document
+        MockMultipartFile file1 = new MockMultipartFile(
+                "file",
+                "local_doc.txt",
+                MediaType.TEXT_PLAIN_VALUE,
+                "Regulations on postgraduate residency research.".getBytes(StandardCharsets.UTF_8)
+        );
+
+        mockMvc.perform(multipart("/api/v1/integration/documents")
+                        .file(file1)
+                        .param("title", "Регламент аспирантуры")
+                        .param("category", "Инструкции")
+                        .param("tags", "аспирантура")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isCreated());
+
+        // 2. Insert LmsMetadata items representing synchronized SDO/Teachbase content
+        LmsMetadata m1 = new LmsMetadata();
+        m1.setExternalId("lms-888");
+        m1.setMetadataKey("title");
+        m1.setMetadataValue("Epidemiology Course Guidelines");
+        lmsMetadataRepository.save(m1);
+
+        LmsMetadata m2 = new LmsMetadata();
+        m2.setExternalId("lms-888");
+        m2.setMetadataKey("category");
+        m2.setMetadataValue("Teaching Material");
+        lmsMetadataRepository.save(m2);
+
+        LmsMetadata m3 = new LmsMetadata();
+        m3.setExternalId("lms-888");
+        m3.setMetadataKey("filetype");
+        m3.setMetadataValue("pdf");
+        lmsMetadataRepository.save(m3);
+
+        LmsMetadata m4 = new LmsMetadata();
+        m4.setExternalId("lms-888");
+        m4.setMetadataKey("tags");
+        m4.setMetadataValue("epidemiology, sdo, teachbase");
+        lmsMetadataRepository.save(m4);
+
+        // 3. Search for local document query "аспирантуры"
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("query", "аспирантуры")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Регламент аспирантуры"))
+                .andExpect(jsonPath("$[0].id", greaterThan(0)));
+
+        // 4. Search for LMS material query "Guidelines"
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("query", "Guidelines")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Epidemiology Course Guidelines"))
+                .andExpect(jsonPath("$[0].category").value("Teaching Material"))
+                .andExpect(jsonPath("$[0].fileType").value("pdf"))
+                .andExpect(jsonPath("$[0].id", lessThan(0))) // assigned negative ID
+                .andExpect(jsonPath("$[0].tags", containsInAnyOrder("epidemiology", "sdo", "teachbase", "LMS", "SDO", "Teachbase")));
+
+        // 5. Unified search query "epidemiology" or "sdo" returning virtual LMS document
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("query", "sdo")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Epidemiology Course Guidelines"));
+
+        // 6. Test specialty / category filter on virtual LMS document (Teaching Material)
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("specialty", "Teaching Material")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Epidemiology Course Guidelines"));
+
+        // 7. Test documentType filter on virtual LMS document (pdf)
+        mockMvc.perform(get("/api/v1/integration/documents")
+                        .param("documentType", "pdf")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(1)))
+                .andExpect(jsonPath("$[0].title").value("Epidemiology Course Guidelines"));
     }
 }
