@@ -9,7 +9,7 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface FeatureRepository extends JpaRepository<FeatureEntity, Long> {
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE FeatureEntity f SET f.readinessRatio = :newRatio WHERE f.id = :id")
     int updateReadinessAtomically(@Param("id") Long id, @Param("newRatio") double newRatio);
 }

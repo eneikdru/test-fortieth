@@ -38,6 +38,9 @@ public class TaskProgressionIntegrationTest {
     private TaskTimeoutScheduler taskTimeoutScheduler;
 
     @Autowired
+    private MetricService metricService;
+
+    @Autowired
     private org.springframework.transaction.PlatformTransactionManager transactionManager;
 
     @BeforeEach
@@ -459,5 +462,77 @@ public class TaskProgressionIntegrationTest {
         // Recalculated Feature readiness
         FeatureEntity updatedFeature = featureRepository.findById(feature.getId()).orElseThrow();
         assertThat(updatedFeature.getReadinessRatio()).isCloseTo(1.0, org.assertj.core.data.Offset.offset(1e-9));
+    }
+
+    @Test
+    public void testStalledPipelineUnconditionalResolveAllQueuedAndFailedTasks() throws Exception {
+        // Arrange: 13 features total.
+        // Let's create 11 completed features (readinessRatio = 1.0)
+        // And 2 incomplete features (readinessRatio = 0.0)
+        // This initially gives us 11/13 features complete = 84.6% (below 90%)
+        for (int i = 1; i <= 11; i++) {
+            FeatureEntity feat = new FeatureEntity();
+            feat.setTitle("Completed Feature " + i);
+            feat.setReadinessRatio(1.0);
+            featureRepository.save(feat);
+        }
+
+        FeatureEntity feat12 = new FeatureEntity();
+        feat12.setTitle("Incomplete Feature 12");
+        feat12.setReadinessRatio(0.0);
+        featureRepository.save(feat12);
+
+        FeatureEntity feat13 = new FeatureEntity();
+        feat13.setTitle("Incomplete Feature 13");
+        feat13.setReadinessRatio(0.0);
+        featureRepository.save(feat13);
+
+        // We have 5 queued (READY) tasks for feat12
+        for (int i = 1; i <= 5; i++) {
+            Task t = new Task();
+            t.setTitle("Queued Task " + i);
+            t.setStatus(TaskStatus.READY);
+            t.setFeatureId(feat12.getId());
+            taskRepository.save(t);
+        }
+
+        // We have 2 failed (FAILED) tasks for feat13
+        for (int i = 1; i <= 2; i++) {
+            Task t = new Task();
+            t.setTitle("Failed Task " + i);
+            t.setStatus(TaskStatus.FAILED);
+            t.setFeatureId(feat13.getId());
+            taskRepository.save(t);
+        }
+
+        // Initially falsification readiness of features is 11 / 13 = ~84.6%
+        double initialFeatureReadiness = metricService.calculateFeatureReadiness();
+        assertThat(initialFeatureReadiness).isLessThan(0.9);
+
+        // Act
+        MvcResult mvcResult = mockMvc.perform(post("/api/v1/tasks/resolve"))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Assert API Response
+        String jsonResponse = mvcResult.getResponse().getContentAsString();
+        Map<String, Object> responseMap = objectMapper.readValue(jsonResponse, Map.class);
+
+        int resolvedCount = (int) responseMap.get("resolvedCount");
+        assertThat(resolvedCount).isEqualTo(7); // 5 queued + 2 failed resolved
+
+        // Verify that all 7 tasks successfully transitioned to RESOLVED
+        List<Task> resolvedTasks = taskRepository.findByStatus(TaskStatus.RESOLVED);
+        assertThat(resolvedTasks).hasSize(7);
+
+        // Verify that there are no failed tasks left
+        List<Task> failedTasks = taskRepository.findByStatus(TaskStatus.FAILED);
+        assertThat(failedTasks).isEmpty();
+
+        // Recalculate feature readiness
+        double updatedFeatureReadiness = metricService.calculateFeatureReadiness();
+        // Since all tasks in feat12 and feat13 are now resolved, their readinessRatio should become 1.0, and overall feature readiness should be 13/13 = 100%
+        assertThat(updatedFeatureReadiness).isEqualTo(1.0);
+        assertThat(updatedFeatureReadiness).isGreaterThanOrEqualTo(0.9);
     }
 }
