@@ -1,0 +1,64 @@
+{
+  "epics": [
+    {
+      "existingEpicId": null,
+      "title": "Binary Document Text Extraction",
+      "jtbd": "When I upload a binary document like a PDF or DOCX, I want its text to be correctly extracted, so that full-text search can match against its actual content.",
+      "kanoClass": "Must-Be",
+      "cynefinDomain": "complicated",
+      "sixSigmaMetric": "Increase successful text extraction rate for binary files from 0% to 100%",
+      "tocConstraintRef": "Document Indexing Pipeline",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: Extract text from binary files (PDF, DOCX, XLSX, PPTX) during upload using an appropriate parser like Apache Tika"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Implement binary file text extraction",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing binary file processing for this epic, I want to use a parser to extract text, so that the document content can be indexed for full-text search.",
+          "acceptanceCriteria": "Given a binary file upload such as a PDF or DOCX,\nWhen the backend processes the file for indexing,\nThen it uses an appropriate parser (like Apache Tika) to extract the text content rather than casting raw bytes to UTF-8.",
+          "leanValue": "essential",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "File Processing CPU Constraints",
+          "sixSigmaMetric": "Reduce binary file indexing failures from 100% to 0%",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    },
+    {
+      "existingEpicId": "c4160c4a-dd34-4436-99e5-09712071949b",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "Increase UI pagination rendering accuracy from 0% to 100%",
+      "tocConstraintRef": "Search Results Pagination Engine",
+      "sourceIndex": 1,
+      "requirements": [
+        "R1: Include total elements and total pages in the paginated search response payload"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Add pagination metadata to search response",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing the search response payload patch for this epic, I want to include total elements and total pages, so that the client UI can correctly render pagination controls.",
+          "acceptanceCriteria": "Given a paginated search request,\nWhen the backend returns results,\nThen the response payload includes total elements and total pages alongside the items array.",
+          "leanValue": "essential",
+          "cynefinDomain": "clear",
+          "tocConstraintRef": "Search API Payload Structure",
+          "sixSigmaMetric": "Increase presence of pagination metadata in search responses from 0% to 100%",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    }
+  ]
+}
