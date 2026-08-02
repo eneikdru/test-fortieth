@@ -1,0 +1,95 @@
+{
+  "epics": [
+    {
+      "existingEpicId": "c0ebc3fb-e9c3-4809-84cd-e0b6d5007703",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "Increase pipeline deliverable readiness ratio from 85% to 100%",
+      "tocConstraintRef": "Failed API Slice task resolution bottleneck in the pipeline",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: Address the persistent failure of four API Slice tasks (ad35452d, 4d3a32f6, 8502067e, and 72ec0f54) to unblock the final 2 project features.",
+        "R2: Resolve the SYSTEM_STALLED state where pipeline readiness is locked at 85%."
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Patch failing API slices",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing the API slice fix for this epic, I want to resolve the failing task states, so that the pipeline unblocks and readiness reaches 100%.",
+          "acceptanceCriteria": "Given the pipeline contains failed API slice tasks (ad35452d, 4d3a32f6, 8502067e, 72ec0f54),\nWhen the backend job processor evaluates their state,\nThen the tasks are safely marked resolved and readiness is updated correctly.",
+          "leanValue": "essential",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "Failed task processing engine execution bottleneck",
+          "sixSigmaMetric": "Reduce failure retry loops from infinite to 0 for specific API tasks",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1",
+            "R2"
+          ]
+        },
+        {
+          "title": "Verify API slice patch",
+          "roleTag": "BARCAN-TAG-06",
+          "jtbd": "When implementing the QA checks for this epic, I want to verify the task resolution logic, so that the pipeline fix does not introduce regressions.",
+          "acceptanceCriteria": "Given the pipeline processor is running in a test environment,\nWhen the updated logic is executed against the stalled API tasks,\nThen unit and integration tests confirm the tasks transition to resolved and the readiness metric increases beyond 85%.",
+          "leanValue": "essential",
+          "cynefinDomain": "clear",
+          "tocConstraintRef": "Test coverage for pipeline task status transitions",
+          "sixSigmaMetric": "Achieve 100% test coverage on task status transition paths",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1",
+            "R2"
+          ]
+        }
+      ]
+    },
+    {
+      "existingEpicId": "d3276078-ba0a-4b65-b71f-47034f040c20",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "Decrease stuck queued task wait time from >4h to <5m",
+      "tocConstraintRef": "Queued task processing and review resolution bottleneck",
+      "sourceIndex": 1,
+      "requirements": [
+        "R1: Unblock PR review fallback and wishlist compilation tasks (85feb4bc-7a85-45bf-a637-476d48d00d6a and 68c31f3d-be90-4949-b5df-b741cd52c4ef) that have been stuck in queued status for over 4 hours."
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Unblock stuck PR review and wishlist tasks",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing the unblocking logic for this epic, I want to force-process or timeout stuck queued tasks, so that pipeline task execution resumes.",
+          "acceptanceCriteria": "Given the tasks 85feb4bc and 68c31f3d are stuck in a queued state for over 4 hours,\nWhen the task scheduler runs the unblocking sweep,\nThen the tasks are safely picked up or transitioned to a resolvable state.",
+          "leanValue": "essential",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "Queued task scheduler execution stall",
+          "sixSigmaMetric": "Reduce stuck task queue time from >4h to <5m",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        },
+        {
+          "title": "Verify unblocking of stuck tasks",
+          "roleTag": "BARCAN-TAG-06",
+          "jtbd": "When implementing the test automation for this epic, I want to simulate stuck queue scenarios, so that the unblocking logic is proven to handle stalled tasks safely.",
+          "acceptanceCriteria": "Given tasks mocked in a queued state for over 4 hours,\nWhen the unblocking routine triggers during tests,\nThen integration tests verify that the tasks correctly resume or fail gracefully without infinite hang.",
+          "leanValue": "essential",
+          "cynefinDomain": "clear",
+          "tocConstraintRef": "Test verification of scheduler timeout bounds",
+          "sixSigmaMetric": "Achieve 100% test coverage on task queue timeout conditions",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    }
+  ]
+}
