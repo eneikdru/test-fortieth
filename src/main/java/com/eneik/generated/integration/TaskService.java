@@ -50,8 +50,17 @@ public class TaskService {
                     && task.getStatusChangedAt().isBefore(fourHoursAgo)
                     && isTaskInFeatureCategory(task, "API Slice");
 
+            boolean isStuckPipeline = task.getStatusChangedAt() != null
+                    && task.getStatusChangedAt().isBefore(fourHoursAgo)
+                    && (isTaskInFeatureCategory(task, "PR review fallback")
+                        || isTaskInFeatureCategory(task, "wishlist compilation")
+                        || (task.getTitle() != null && (task.getTitle().contains("85feb4bc-7a85-45bf-a637-476d48d00d6a") || task.getTitle().contains("68c31f3d-be90-4949-b5df-b741cd52c4ef"))));
+
             if (isStuckApiSlice) {
                 log.info("Explicitly resolving stuck API Slice task: {}", task.getId());
+            }
+            if (isStuckPipeline) {
+                log.info("Explicitly resolving stuck pipeline task: {} ({})", task.getId(), task.getTitle());
             }
 
             int updated = taskRepository.updateStatusAtomically(task.getId(), TaskStatus.READY, TaskStatus.RESOLVED);
@@ -156,7 +165,7 @@ public class TaskService {
     }
 
     public String getFlowCoreState() {
-        if (hasStuckApiSliceTasks() || hasFailedTestCoverageTasks()) {
+        if (hasStuckApiSliceTasks() || hasFailedTestCoverageTasks() || hasStuckPipelineTasks()) {
             return "SYSTEM_STALLED";
         }
         long readyCount = taskRepository.countByStatus(TaskStatus.READY);
@@ -182,6 +191,21 @@ public class TaskService {
             FeatureEntity feature = featureRepository.findById(task.getFeatureId()).orElse(null);
             if (feature != null && feature.getTitle() != null && feature.getTitle().toLowerCase().contains(categoryName.toLowerCase())) {
                 return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean hasStuckPipelineTasks() {
+        java.time.LocalDateTime cutoff = java.time.LocalDateTime.now(clock).minusHours(4);
+        List<Task> readyTasks = taskRepository.findByStatus(TaskStatus.READY);
+        for (Task task : readyTasks) {
+            if (task.getStatusChangedAt() != null && task.getStatusChangedAt().isBefore(cutoff)) {
+                if (isTaskInFeatureCategory(task, "PR review fallback")
+                        || isTaskInFeatureCategory(task, "wishlist compilation")
+                        || (task.getTitle() != null && (task.getTitle().contains("85feb4bc-7a85-45bf-a637-476d48d00d6a") || task.getTitle().contains("68c31f3d-be90-4949-b5df-b741cd52c4ef")))) {
+                    return true;
+                }
             }
         }
         return false;
