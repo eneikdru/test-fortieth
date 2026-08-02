@@ -1,0 +1,54 @@
+{
+  "epics": [
+    {
+      "existingEpicId": "d3276078-ba0a-4b65-b71f-47034f040c20",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "Reduce time tasks remain in queued or failed status from over 4 hours to under 1 hour",
+      "tocConstraintRef": "Task processing engine throughput",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: The system must process and clear tasks in the 'API Slice' and 'Test Coverage' categories that are stuck in failed status.",
+        "R2: The system must process tasks in the 'API Slice' and 'Test Coverage' categories that are stuck in queued status for more than 4 hours.",
+        "R3: The system must properly update project readiness to resolve the STAGNATION WARNING after unblocking tasks."
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Backend patch for processing stuck tasks",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing the unblocking logic for this epic, I want to patch the task processing service, so that tasks stuck in queued or failed states are resolved and readiness is updated.",
+          "acceptanceCriteria": "Given a task in the 'API Slice' category stuck in queued status for over 4 hours\nWhen the processing job runs\nThen the task is transitioned appropriately and readiness is updated\nGiven a task in 'Test Coverage' in a failed state\nWhen the job runs\nThen the stagnation state is cleared",
+          "leanValue": "essential",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "Task status transition logic",
+          "sixSigmaMetric": "Decrease number of tasks stuck in queued/failed state from current baseline to zero",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1",
+            "R2",
+            "R3"
+          ]
+        },
+        {
+          "title": "QA coverage for task unblocking logic",
+          "roleTag": "BARCAN-TAG-06",
+          "jtbd": "When implementing QA for this epic, I want to add tests for the new unblocking logic, so that the pipeline continues to process tasks without regression.",
+          "acceptanceCriteria": "Given unit tests for the task status identification logic\nWhen the test suite executes\nThen it successfully identifies tasks queued for > 4 hours\nGiven integration tests for the task processor\nWhen processing failed tasks\nThen the project readiness is verified to change correctly",
+          "leanValue": "essential",
+          "cynefinDomain": "clear",
+          "tocConstraintRef": "Test suite missing regression coverage for stagnation states",
+          "sixSigmaMetric": "Increase line coverage for task transition logic to 100%",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1",
+            "R2",
+            "R3"
+          ]
+        }
+      ]
+    }
+  ]
+}
