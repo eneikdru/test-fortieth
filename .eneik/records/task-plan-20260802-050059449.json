@@ -1,0 +1,95 @@
+{
+  "epics": [
+    {
+      "existingEpicId": "c0ebc3fb-e9c3-4809-84cd-e0b6d5007703",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "Increase deliverable readiness ratio from 85% to 100% by resolving API slice failures",
+      "tocConstraintRef": "API Slice Task Execution and Status Transition Pipeline",
+      "sourceIndex": 0,
+      "requirements": [
+        "R1: Debug and patch the underlying exception causing API Slice tasks (e.g., 8502067e, 72ec0f54) to fail repeatedly",
+        "R2: Ensure pipeline recovers from SYSTEM_STALLED state to process the final 2 project features"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Patch API Slice Execution Failures",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing the pipeline fix for this epic, I want to correct the execution logic for API Slice tasks, so that the project cycle can finish successfully.",
+          "acceptanceCriteria": "Given a set of API Slice tasks in a queued or failed state\nWhen the task execution pipeline processes them\nThen the tasks must transition to successfully resolved without errors\nAnd the SYSTEM_STALLED flag must be cleared if all tasks pass",
+          "leanValue": "essential",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "API Slice Task Evaluation Logic",
+          "sixSigmaMetric": "Reduce API slice execution error rate from current baseline to 0%",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1",
+            "R2"
+          ]
+        },
+        {
+          "title": "Verify API Slice Pipeline Execution and Readiness Progression",
+          "roleTag": "BARCAN-TAG-06",
+          "jtbd": "When implementing QA for this epic, I want to add unit and integration tests verifying task state transitions, so that future regressions in the falsification pipeline are prevented.",
+          "acceptanceCriteria": "Given a test environment with the updated API slice execution logic\nWhen a mocked failed API slice task is reprocessed\nThen the integration test must assert the task resolves successfully\nAnd the test must assert the deliverable readiness ratio increments past 85%",
+          "leanValue": "essential",
+          "cynefinDomain": "clear",
+          "tocConstraintRef": "Automated Falsification Readiness Pipeline Checks",
+          "sixSigmaMetric": "Increase integration test coverage of the API Slice execution path to 100%",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1",
+            "R2"
+          ]
+        }
+      ]
+    },
+    {
+      "existingEpicId": "d3276078-ba0a-4b65-b71f-47034f040c20",
+      "title": null,
+      "jtbd": null,
+      "kanoClass": null,
+      "cynefinDomain": null,
+      "sixSigmaMetric": "Reduce queued idle time for critical PR review and wishlist compilation tasks from >4 hours to <5 minutes",
+      "tocConstraintRef": "Critical Pipeline Task Queue Processing",
+      "sourceIndex": 1,
+      "requirements": [
+        "R1: Resolve the queue processing bottleneck preventing PR review fallback and wishlist compilation tasks from advancing"
+      ],
+      "coverageComplete": true,
+      "slices": [
+        {
+          "title": "Patch Queue Processing for Stuck Tasks",
+          "roleTag": "BARCAN-TAG-02",
+          "jtbd": "When implementing queue unblocking for this epic, I want to patch the state evaluation logic for stuck pipeline tasks, so that the workflow continues without manual intervention.",
+          "acceptanceCriteria": "Given tasks (e.g., PR review fallback, wishlist compilation) stuck in queued status for over 4 hours\nWhen the queue processing daemon evaluates them\nThen the tasks must transition to a processing state\nAnd subsequent pipeline stages must resume execution",
+          "leanValue": "essential",
+          "cynefinDomain": "complicated",
+          "tocConstraintRef": "Pipeline Queue State Transition Daemon",
+          "sixSigmaMetric": "Decrease pipeline task state transition delay to 0 hours",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        },
+        {
+          "title": "Verify Task Queue Unblocking Mechanism",
+          "roleTag": "BARCAN-TAG-06",
+          "jtbd": "When implementing QA for this epic, I want to write unit and integration tests for queue state evaluations, so that tasks do not get permanently stuck in a queued state.",
+          "acceptanceCriteria": "Given an automated integration test with mocked PR review and wishlist tasks in a queued state\nWhen the queue unblocking logic is triggered\nThen the test must assert that the tasks move to the processing state\nAnd the test must assert that the idle timer is correctly evaluated",
+          "leanValue": "essential",
+          "cynefinDomain": "clear",
+          "tocConstraintRef": "Automated Pipeline Queue Tests",
+          "sixSigmaMetric": "Increase test coverage of queue stagnation recovery paths to 100%",
+          "hasUi": false,
+          "requirementRefs": [
+            "R1"
+          ]
+        }
+      ]
+    }
+  ]
+}
