@@ -382,7 +382,60 @@ public class TaskServiceUnitTest {
         // Act
         taskService.evaluateAndResumeIfStalled();
 
-        // Assert: make sure findByStatus(READY) or findByStatus(FAILED) are never called (no resolution triggered)
-        verify(taskRepository, never()).findByStatus(any());
+        // Assert: make sure no status updates are performed (no resolution triggered)
+        verify(taskRepository, never()).updateStatusAtomically(anyLong(), any(), any());
+    }
+
+    @Test
+    public void testGetFlowCoreStateWhenApiSliceTaskStuck() {
+        // Arrange - Setup a clock fixed to a specific instant
+        java.time.Instant instant = java.time.Instant.parse("2026-08-02T12:00:00Z");
+        java.time.Clock fixedClock = java.time.Clock.fixed(instant, java.time.ZoneId.of("UTC"));
+
+        // Re-inject TaskService with fixed clock
+        taskService = new TaskService(taskRepository, featureRepository, fixedClock);
+
+        Task stuckTask = new Task();
+        stuckTask.setId(999L);
+        stuckTask.setTitle("API Slice database operation");
+        stuckTask.setStatus(TaskStatus.READY);
+        // Created 5 hours before fixed clock time (stuck)
+        stuckTask.setStatusChangedAt(java.time.LocalDateTime.ofInstant(instant.minus(java.time.Duration.ofHours(5)), java.time.ZoneId.of("UTC")));
+        stuckTask.setFeatureId(10L);
+
+        when(taskRepository.findByStatus(TaskStatus.READY)).thenReturn(Collections.singletonList(stuckTask));
+
+        FeatureEntity feature = new FeatureEntity();
+        feature.setId(10L);
+        feature.setTitle("API Slice Feature");
+        when(featureRepository.findById(10L)).thenReturn(Optional.of(feature));
+
+        // Act
+        String state = taskService.getFlowCoreState();
+
+        // Assert - must detect the stuck API Slice task and return SYSTEM_STALLED
+        assertThat(state).isEqualTo("SYSTEM_STALLED");
+    }
+
+    @Test
+    public void testGetFlowCoreStateWhenFailedTestCoverageTaskExists() {
+        Task failedTask = new Task();
+        failedTask.setId(888L);
+        failedTask.setTitle("Failed test coverage run");
+        failedTask.setStatus(TaskStatus.FAILED);
+        failedTask.setFeatureId(20L);
+
+        when(taskRepository.findByStatus(TaskStatus.FAILED)).thenReturn(Collections.singletonList(failedTask));
+
+        FeatureEntity feature = new FeatureEntity();
+        feature.setId(20L);
+        feature.setTitle("Test Coverage Feature");
+        when(featureRepository.findById(20L)).thenReturn(Optional.of(feature));
+
+        // Act
+        String state = taskService.getFlowCoreState();
+
+        // Assert - must detect failed Test Coverage task and return SYSTEM_STALLED
+        assertThat(state).isEqualTo("SYSTEM_STALLED");
     }
 }

@@ -678,4 +678,76 @@ public class TaskProgressionIntegrationTest {
         assertThat(resolved).isNotEmpty();
         assertThat(taskRepository.findByStatus(TaskStatus.READY)).isEmpty();
     }
+
+    @Test
+    public void testStuckApiSliceTaskTransitionedAndReadinessUpdated() throws Exception {
+        // Arrange
+        FeatureEntity feature = new FeatureEntity();
+        feature.setTitle("API Slice Feature");
+        feature.setReadinessRatio(0.0);
+        featureRepository.save(feature);
+
+        Task stuckTask = new Task();
+        stuckTask.setTitle("API Slice database check");
+        stuckTask.setStatus(TaskStatus.READY);
+        // Stuck for over 4 hours
+        stuckTask.setStatusChangedAt(java.time.LocalDateTime.now().minusHours(5));
+        stuckTask.setFeatureId(feature.getId());
+        taskRepository.save(stuckTask);
+
+        // Verify state is SYSTEM_STALLED initially
+        mockMvc.perform(get("/api/v1/tasks/state"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("SYSTEM_STALLED"));
+
+        // Act - Run the processing job/endpoint
+        mockMvc.perform(post("/api/v1/tasks/resolve"))
+                .andExpect(status().isOk());
+
+        // Assert - Task is transitioned to RESOLVED, state is now COMPLETED, and readiness updated
+        Task updatedTask = taskRepository.findById(stuckTask.getId()).orElseThrow();
+        assertThat(updatedTask.getStatus()).isEqualTo(TaskStatus.RESOLVED);
+
+        mockMvc.perform(get("/api/v1/tasks/state"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("COMPLETED"));
+
+        FeatureEntity updatedFeature = featureRepository.findById(feature.getId()).orElseThrow();
+        assertThat(updatedFeature.getReadinessRatio()).isEqualTo(1.0);
+    }
+
+    @Test
+    public void testFailedTestCoverageTaskTransitionedAndStagnationCleared() throws Exception {
+        // Arrange
+        FeatureEntity feature = new FeatureEntity();
+        feature.setTitle("Test Coverage Feature");
+        feature.setReadinessRatio(0.0);
+        featureRepository.save(feature);
+
+        Task failedTask = new Task();
+        failedTask.setTitle("Failed Test Coverage task");
+        failedTask.setStatus(TaskStatus.FAILED);
+        failedTask.setFeatureId(feature.getId());
+        taskRepository.save(failedTask);
+
+        // Verify state is SYSTEM_STALLED initially because of the failed Test Coverage task
+        mockMvc.perform(get("/api/v1/tasks/state"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("SYSTEM_STALLED"));
+
+        // Act - Run evaluation and resume to clear the stagnation state
+        taskService.evaluateAndResumeIfStalled();
+
+        // Assert - The failed task should be transitioned to RESOLVED
+        Task updatedTask = taskRepository.findById(failedTask.getId()).orElseThrow();
+        assertThat(updatedTask.getStatus()).isEqualTo(TaskStatus.RESOLVED);
+
+        // Stagnation is cleared, and flow core state is now COMPLETED
+        mockMvc.perform(get("/api/v1/tasks/state"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("COMPLETED"));
+
+        FeatureEntity updatedFeature = featureRepository.findById(feature.getId()).orElseThrow();
+        assertThat(updatedFeature.getReadinessRatio()).isEqualTo(1.0);
+    }
 }
